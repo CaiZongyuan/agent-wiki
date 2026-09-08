@@ -3463,4 +3463,2398 @@
       color: var(--text);
       border: 1px solid var(--toolbar-border);
       padding: 0.5rem 1rem;
-   
+      border-radius: 0.5rem;
+      font-family: inherit;
+      font-size: 0.75rem;
+      opacity: 0;
+      transition: opacity 0.2s, transform 0.2s;
+      z-index: 200;
+      pointer-events: none;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    }
+    .archify-toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    @media (max-width: 720px) {
+      body { padding: 1rem; }
+      .toolbar .preset-menu,
+      .toolbar .export-menu {
+        position: fixed;
+        top: 4.5rem;
+        right: 1rem;
+        left: 1rem;
+        width: auto;
+        max-width: none;
+      }
+      .toolbar {
+        position: relative;
+        justify-content: flex-end;
+        width: max-content;
+        max-width: 100%;
+        margin-left: auto;
+        margin-bottom: 1rem;
+      }
+      .header { margin-bottom: 1.25rem; padding-right: 0; }
+      html[data-preset="signal-flow"] .header,
+      html[data-preset="blueprint"] .header,
+      html[data-preset="editorial"] .header { padding-right: 0; }
+      .header-row {
+        gap: 0.75rem;
+        align-items: flex-start;
+      }
+      html[data-preset="signal-flow"] .header-row,
+      html[data-preset="blueprint"] .header-row,
+      html[data-preset="editorial"] .header-row { flex-wrap: wrap; }
+      html[data-preset="signal-flow"] .header-row::after {
+        margin-left: 0;
+        order: 3;
+      }
+      html[data-preset="blueprint"] .header-row::after {
+        margin-left: 0;
+        order: 3;
+      }
+      html[data-preset="editorial"] .header-row::after {
+        margin-left: 0;
+        order: 3;
+      }
+      h1 {
+        font-size: 1.25rem;
+        line-height: 1.25;
+      }
+      .subtitle {
+        margin-left: 0;
+        font-size: 0.8125rem;
+        line-height: 1.55;
+      }
+      .diagram-container {
+        padding: 0.75rem;
+        border-radius: 0.75rem;
+      }
+      html:not([data-embed="true"]) .diagram-container {
+        padding: 0.75rem 0.75rem 4.25rem;
+      }
+      html:not([data-embed="true"]) .diagram-container[data-wide-diagram="true"] {
+        overflow-x: auto;
+        overflow-y: hidden;
+        overscroll-behavior-x: contain;
+        scrollbar-width: thin;
+        scroll-behavior: smooth;
+      }
+      html:not([data-embed="true"]) .diagram-container[data-wide-diagram="true"] > svg {
+        min-width: 720px;
+      }
+      html:not([data-embed="true"]) .diagram-container[data-wide-diagram="true"] .diagram-nav,
+      html:not([data-embed="true"]) .diagram-container[data-wide-diagram="true"] .overview-map,
+      html:not([data-embed="true"]) .diagram-container[data-wide-diagram="true"] .focus-chip,
+      html:not([data-embed="true"]) .diagram-container[data-wide-diagram="true"] .route-probe,
+      html:not([data-embed="true"]) .diagram-container[data-wide-diagram="true"] .semantic-lens,
+      html:not([data-embed="true"]) .diagram-container[data-wide-diagram="true"] .diagram-guide,
+      html:not([data-embed="true"]) .diagram-container[data-wide-diagram="true"] .node-finder {
+        transform: translateX(var(--archify-scroll-x, 0px));
+      }
+      .diagram-nav { right: 0.5rem; bottom: 0.5rem; }
+      .diagram-nav button {
+        min-width: 2.75rem;
+        height: 2.75rem;
+      }
+      .diagram-nav [data-view="reset"] { min-width: 3.75rem; }
+      .diagram-nav [data-view="reset"][data-detail-visible] { min-width: 4.35rem; }
+      .overview-map {
+        right: 0.5rem;
+        bottom: 3.7rem;
+        width: min(10.25rem, calc(100% - 1rem));
+      }
+      .overview-map[data-docked="true"] {
+        right: 0.5rem;
+        top: var(--archify-radar-top, 0.5rem);
+        bottom: auto;
+        transform: none !important;
+      }
+      .overview-map[data-docked="true"][data-dock-side="left"] {
+        right: auto;
+        left: 0.5rem;
+      }
+      .overview-map-surface { height: 4rem; }
+      .semantic-lens {
+        right: 0.5rem;
+        bottom: 3.7rem;
+        width: calc(100% - 1rem);
+        max-height: calc(100% - 4.2rem);
+      }
+      .semantic-lens[data-dock-side] { left: auto; right: 0.5rem; }
+      .semantic-lens-kinds { max-height: min(12rem, 34vh); }
+      .focus-chip {
+        left: 0.5rem;
+        top: 0.5rem;
+        width: calc(100% - 1rem);
+        max-width: none;
+      }
+      .relationship-lens-list { max-height: min(12rem, 38vh); }
+      .relationship-lens-actions #btn-focus-relations { display: block; color: var(--database-stroke); }
+      .focus-chip:not([data-relations-expanded="true"]) .relationship-lens-head { border-bottom-color: transparent; }
+      .focus-chip:not([data-relations-expanded="true"]) .relationship-lens-list { display: none; }
+      /* While a mobile reader previews one relationship, turn the full Lens
+         into a compact peek card. This keeps the exact source and target on
+         canvas instead of covering them with a long, scrollable list. */
+      .focus-chip[data-relationship-previewing="true"] .relationship-lens-list {
+        max-height: none;
+        padding: 0.35rem;
+        overflow: hidden;
+      }
+      .focus-chip[data-relationship-previewing="true"] .relationship-lens-group { margin: 0; }
+      .focus-chip[data-relationship-previewing="true"] .relationship-lens-group-title,
+      .focus-chip[data-relationship-previewing="true"] .relationship-lens-row:not([data-preview-active="true"]) {
+        display: none;
+      }
+      .node-finder {
+        top: 0.5rem;
+        left: 0.5rem;
+        width: min(22rem, calc(100% - 1rem));
+        max-height: calc(100% - 1rem);
+      }
+      .diagram-guide {
+        top: 0.5rem;
+        right: 0.5rem;
+        left: 0.5rem;
+        width: auto;
+        max-height: calc(100% - 1rem);
+      }
+      .diagram-guide-head { padding: 0.62rem 0.7rem 0.52rem; }
+      .diagram-guide-stats { padding: 0.42rem 0.7rem; }
+      .diagram-guide-actions {
+        grid-template-columns: 1fr;
+        gap: 0.28rem;
+        padding: 0.42rem;
+      }
+      .diagram-guide-action {
+        min-height: 3.1rem;
+        padding: 0.42rem 0.48rem;
+      }
+      .diagram-guide-action small {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .diagram-guide-index {
+        width: 1.5rem;
+        height: 1.5rem;
+      }
+      .diagram-guide-shortcuts { padding: 0.46rem 0.7rem 0.52rem; }
+      .diagram-guide-action[data-guide-action="present"] { grid-column: auto; }
+      .route-probe[data-guide-open="true"] {
+        visibility: hidden;
+        pointer-events: none;
+      }
+      .node-finder-results { max-height: min(16rem, 38vh); }
+      .route-probe {
+        left: 0.5rem;
+        bottom: 3.7rem;
+        width: calc(100% - 1rem);
+        min-width: 0;
+      }
+      .route-probe[data-route-dock="top"] {
+        top: 0.5rem;
+        bottom: auto;
+      }
+      .route-probe[data-finder-open="true"] {
+        visibility: hidden;
+        pointer-events: none;
+      }
+      .route-probe-head { padding: 0.45rem 0.48rem 0.38rem; }
+      .route-probe-path { padding: 0.35rem 0.48rem 0.2rem; }
+      .route-probe-node { min-height: 2.75rem !important; }
+      .route-journey-controls {
+        grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem minmax(0, 1fr);
+        padding: 0.08rem 0.48rem 0.32rem;
+      }
+      .route-journey-controls button { min-height: 2.75rem; }
+      .route-probe-status { padding: 0.05rem 0.48rem 0.38rem; }
+      .route-probe-node { max-width: 7.5rem; }
+      .guided-views {
+        grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem;
+        gap: 0.2rem;
+        padding: 0.25rem;
+      }
+      .guided-view-actions {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+      .guided-views > #guided-view-prev,
+      .guided-views > #guided-view-next {
+        align-self: center;
+        height: 2.75rem;
+      }
+      .guided-view-play,
+      .guided-view-all,
+      .guided-view-beat-link { min-height: 2.75rem; }
+      .guided-view-copy small { white-space: normal; }
+      .guided-story-caption { padding: 0.32rem 0.45rem; }
+      .guided-story-caption-index { min-width: 2.9rem; padding-right: 0.42rem; }
+      .guided-story-caption strong,
+      .guided-story-caption small { white-space: normal; }
+      .guided-story-caption-next { display: none; }
+      .guided-view-trail { min-height: 2rem; }
+      .guided-view-trail .guided-view-stop {
+        min-height: 2rem;
+        padding: 0.22rem 0.42rem 0.22rem 0.28rem;
+      }
+      .guided-view-handoff { max-width: min(9rem, 32vw); }
+      .guided-view-index { padding-top: 0.35rem; }
+      .guided-view-chapters {
+        gap: 0.35rem;
+        scroll-padding-inline: 0.2rem;
+      }
+      .guided-view-chapters li {
+        flex: 0 0 min(14rem, 78vw);
+        min-width: 0;
+      }
+      .guided-view-chapter { min-height: 2.75rem; }
+      .guided-views[data-active-view="all"] {
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 0.2rem;
+        padding: 0.25rem;
+      }
+      .guided-views[data-active-view="all"] .guided-view-copy {
+        grid-column: 1;
+        grid-row: 1;
+      }
+      .guided-views[data-active-view="all"] .guided-view-actions {
+        grid-column: 2;
+        grid-row: 1;
+      }
+      .guided-views[data-active-view="all"] .guided-view-play {
+        min-width: 6rem !important;
+        min-height: 2.75rem;
+      }
+      .guided-views[data-active-view="all"] .guided-view-index {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        padding: 0.3rem 0.08rem 0;
+        border-top: 1px solid color-mix(in srgb, var(--toolbar-border) 72%, transparent);
+        border-left: 0;
+      }
+      html[data-embed="true"][data-share-playback="true"] .share-chapter-cue:not([hidden]),
+      html[data-embed="true"][data-share-moment="true"] .share-chapter-cue:not([hidden]) {
+        top: 0.5rem;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 0.28rem 0.55rem;
+        width: calc(100% - 1rem);
+        min-height: 0;
+        padding: 0.45rem 0.55rem 0.55rem;
+      }
+      html[data-embed="true"][data-share-playback="true"] .diagram-container {
+        padding-top: 4.25rem;
+      }
+      html[data-embed="true"][data-share-moment="true"] .diagram-container {
+        padding-top: 4.25rem;
+      }
+      .share-chapter-index {
+        min-width: 4.4rem;
+        padding-right: 0.5rem;
+      }
+      .share-chapter-copy small { font-size: 0.46rem; }
+      .share-chapter-route {
+        grid-column: 1 / -1;
+        font-size: 0.5rem;
+        text-align: left;
+      }
+      .cards {
+        grid-template-columns: 1fr;
+        margin-top: 1rem;
+      }
+      html[data-present="true"]:not([data-embed="true"]) body { padding: 0.5rem; }
+      html[data-present="true"]:not([data-embed="true"]) .container {
+        gap: 0.5rem;
+        height: calc(100dvh - 1rem);
+      }
+      html[data-present="true"]:not([data-embed="true"]) .toolbar {
+        position: fixed;
+        top: 0.5rem;
+        right: 0.5rem;
+        margin: 0;
+        gap: 0.25rem;
+      }
+      html[data-present="true"]:not([data-embed="true"]) .toolbar button {
+        min-height: 2.75rem;
+        padding: 0.42rem 0.58rem;
+      }
+      html[data-present="true"]:not([data-embed="true"]) .header {
+        min-height: 2.25rem;
+        padding: 3.5rem 0 0;
+      }
+      html[data-present="true"]:not([data-embed="true"]) .header-row {
+        min-height: 2.25rem;
+        margin: 0;
+        align-items: center;
+        flex-wrap: nowrap;
+      }
+      html[data-present="true"]:not([data-embed="true"]) .header-row::after,
+      html[data-present="true"]:not([data-embed="true"]) .pulse-dot,
+      html[data-present="true"]:not([data-embed="true"]) .subtitle { display: none; }
+      html[data-present="true"]:not([data-embed="true"]) h1 {
+        flex: 1 1 auto;
+        min-width: 0;
+        max-width: 100%;
+        overflow: hidden;
+        font-size: 0.875rem;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      html[data-present="true"]:not([data-embed="true"]) .guided-views {
+        padding: 0.2rem;
+      }
+      html[data-present="true"]:not([data-embed="true"]) .guided-view-copy small { display: none; }
+      html[data-present="true"]:not([data-embed="true"]) .guided-story-caption small { display: block; }
+      html[data-present="true"]:not([data-embed="true"]) .diagram-container { padding: 0.5rem 0.5rem 3.75rem; }
+      html[data-present="true"]:not([data-embed="true"]) .diagram-container[data-wide-diagram="true"] > svg {
+        width: 720px;
+        height: auto;
+        min-width: 720px;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .export-menu-section { grid-template-columns: 1fr; }
+      .export-menu-heading,
+      .toolbar .export-menu button[data-format="share-card"],
+      .toolbar .export-menu button[data-action="route-share-card"],
+      .toolbar .export-menu button[data-action="reach-share-card"] { grid-column: 1; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .guided-story-caption { animation: none !important; }
+      .toolbar .preset-menu.open,
+      .toolbar .export-menu.open { animation: none; }
+      .toolbar-chevron { transition: none; }
+    }
+
+    @media (max-width: 360px) {
+      .toolbar { gap: 0.25rem; }
+      .toolbar button { padding-right: 0.58rem; padding-left: 0.58rem; }
+      .toolbar #btn-motion { min-width: 4.4rem; padding-right: 0.58rem; padding-left: 0.58rem; }
+      #theme-label, #preset-label, #present-label { display: none; }
+      .guided-view-handoff { max-width: 6.5rem; }
+    }
+
+    /* ==========================================================
+       SVG SEMANTIC CLASSES — use these instead of inline fill/stroke
+       ========================================================== */
+    .c-grid       { stroke: var(--grid); fill: none; }
+    .c-mask       { fill: var(--mask); stroke: none; }
+
+    .c-frontend   { fill: var(--frontend-fill);   stroke: var(--frontend-stroke); }
+    .c-backend    { fill: var(--backend-fill);    stroke: var(--backend-stroke); }
+    .c-database   { fill: var(--database-fill);   stroke: var(--database-stroke); }
+    .c-cloud      { fill: var(--cloud-fill);      stroke: var(--cloud-stroke); }
+    .c-security   { fill: var(--security-fill);   stroke: var(--security-stroke); }
+    .c-messagebus { fill: var(--messagebus-fill); stroke: var(--messagebus-stroke); }
+    .c-external   { fill: var(--external-fill);   stroke: var(--external-stroke); }
+
+    /* Text helpers */
+    .t-primary { fill: var(--text); }
+    .t-muted   { fill: var(--text-muted); }
+    .t-dim     { fill: var(--text-dim); }
+    .t-frontend   { fill: var(--frontend-stroke); }
+    .t-backend    { fill: var(--backend-stroke); }
+    .t-database   { fill: var(--database-stroke); }
+    .t-cloud      { fill: var(--cloud-stroke); }
+    .t-security   { fill: var(--security-stroke); }
+    .t-messagebus { fill: var(--messagebus-stroke); }
+    .t-external   { fill: var(--external-stroke); }
+
+    /* Semantic Sigils are small authored role stamps, not icons from a brand
+       pack and not viewer controls. Prefix selectors with svg so the canonical
+       export's SVG-only stylesheet collector keeps them automatically. */
+    svg .semantic-sigil {
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.35;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      opacity: 0.76;
+      pointer-events: none;
+    }
+    svg .semantic-sigil > * { vector-effect: non-scaling-stroke; }
+    svg .semantic-sigil .sigil-fill { fill: currentColor; stroke: none; }
+    svg .s-frontend   { color: var(--frontend-stroke); }
+    svg .s-backend    { color: var(--backend-stroke); }
+    svg .s-database   { color: var(--database-stroke); }
+    svg .s-cloud      { color: var(--cloud-stroke); }
+    svg .s-security   { color: var(--security-stroke); }
+    svg .s-messagebus { color: var(--messagebus-stroke); }
+    svg .s-external   { color: var(--external-stroke); }
+
+    /* Reading Depth is a viewer-only level-of-detail layer. MAP preserves the
+       authored structure and primary labels, READ restores relationship labels
+       and node context, and FULL restores tags and fine annotations. Semantic
+       intent can reveal the relevant detail without moving any geometry. */
+    svg [data-detail] { transition: opacity 160ms ease; }
+    svg [data-detail-anchor] {
+      transform-box: fill-box;
+      transform-origin: center;
+      transition: transform 160ms ease;
+    }
+    .diagram-container[data-detail-level="map"] svg [data-detail="context"],
+    .diagram-container[data-detail-level="map"] svg [data-detail="fine"],
+    .diagram-container[data-detail-level="read"] svg [data-detail="fine"] {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .diagram-container[data-detail-level="map"] svg [data-detail-anchor] {
+      transform: translateY(8px);
+    }
+
+    /* Focus, lens, preview, route, and story states are stronger reader intent than
+       the global zoom level. Reveal only their exact semantic matches. */
+    svg[data-focus-active] [data-focus-match][data-detail],
+    svg[data-focus-active] [data-focus-match] [data-detail],
+    svg[data-reach-active] [data-reach-match][data-detail],
+    svg[data-reach-active] [data-reach-match] [data-detail],
+    svg[data-lens-active] [data-lens-match][data-detail],
+    svg[data-lens-active] [data-lens-match] [data-detail],
+    svg[data-legend-preview-active] [data-legend-preview-match][data-detail],
+    svg[data-legend-preview-active] [data-legend-preview-match] [data-detail],
+    svg[data-intent-trace-active] [data-intent-trace-match][data-detail],
+    svg[data-intent-trace-active] [data-intent-trace-match] [data-detail],
+    svg[data-route-active] [data-route-match][data-detail],
+    svg[data-route-active] [data-route-match] [data-detail],
+    svg[data-story-active] [data-story-step][data-detail],
+    svg[data-story-active] [data-story-step] [data-detail],
+    svg[data-relationship-preview-active] [data-relationship-preview][data-detail],
+    svg[data-relationship-preview-active] [data-relationship-preview] [data-detail],
+    svg [data-node-id]:hover [data-detail],
+    svg [data-node-id]:focus-visible [data-detail] {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    svg[data-focus-active] [data-focus-match] [data-detail-anchor],
+    svg[data-reach-active] [data-reach-match] [data-detail-anchor],
+    svg[data-lens-active] [data-lens-match] [data-detail-anchor],
+    svg[data-legend-preview-active] [data-legend-preview-match] [data-detail-anchor],
+    svg[data-intent-trace-active] [data-intent-trace-match] [data-detail-anchor],
+    svg[data-route-active] [data-route-match] [data-detail-anchor],
+    svg[data-story-active] [data-story-step] [data-detail-anchor],
+    svg [data-node-id]:hover [data-detail-anchor],
+    svg [data-node-id]:focus-visible [data-detail-anchor] { transform: none; }
+
+    /* Arrows */
+    .a-default   { stroke: var(--arrow); fill: none; }
+    .a-emphasis  { stroke: var(--arrow-emphasis); fill: none; }
+    .a-security  { stroke: var(--security-stroke); fill: none; stroke-dasharray: 5,5; }
+    .a-dashed    { stroke: var(--database-stroke); fill: none; stroke-dasharray: 4,4; }
+
+    /* Arrowhead markers reference these */
+    .m-default   { fill: var(--arrow); }
+    .m-emphasis  { fill: var(--arrow-emphasis); }
+    .m-security  { fill: var(--security-stroke); }
+    .m-dashed    { fill: var(--database-stroke); }
+
+    /* Stable semantic exploration hooks emitted by every renderer. */
+    svg [data-node-id] {
+      cursor: pointer;
+      transition: opacity 0.18s ease, filter 0.18s ease;
+    }
+    svg [data-edge-from] { transition: opacity 0.18s ease, filter 0.18s ease; }
+    svg [data-node-id]:hover,
+    svg [data-node-id]:focus-visible {
+      filter: drop-shadow(0 0 7px var(--frontend-stroke));
+      outline: none;
+    }
+    /* Verified Source Beacons are installed at runtime only for nodes whose
+       repository evidence passed the local revision/blob/line checks. They
+       live inside the owning node so every focus, route, story, and guided
+       view keeps one coherent opacity state. Export serialization removes
+       them before producing the canonical SVG or any derived visual. */
+    .source-evidence-beacon {
+      pointer-events: none;
+      opacity: 0.76;
+      transition: opacity 160ms ease, filter 160ms ease;
+    }
+    .source-evidence-beacon rect {
+      fill: color-mix(in srgb, var(--mask) 92%, var(--backend-stroke));
+      stroke: color-mix(in srgb, var(--backend-stroke) 82%, var(--panel-border));
+      stroke-width: 1;
+      vector-effect: non-scaling-stroke;
+    }
+    .source-evidence-beacon text {
+      fill: var(--backend-stroke);
+      font-size: 5.5px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-anchor: middle;
+      text-transform: uppercase;
+    }
+    svg [data-node-id]:hover .source-evidence-beacon,
+    svg [data-node-id]:focus-visible .source-evidence-beacon,
+    svg [data-node-id][data-focus-selected] .source-evidence-beacon {
+      opacity: 1;
+      filter: drop-shadow(0 0 4px color-mix(in srgb, var(--backend-stroke) 72%, transparent));
+    }
+    svg[data-preset="signal-flow"] .source-evidence-beacon { opacity: 0.9; }
+    svg[data-preset="blueprint"] .source-evidence-beacon rect {
+      rx: 0.8px;
+      filter: none;
+    }
+    svg [data-legend-kind][role="button"] { cursor: pointer; }
+    svg [data-legend-kind]:focus { outline: none; }
+    svg [data-legend-hit] {
+      fill: transparent;
+      stroke: transparent;
+      stroke-width: 1.4;
+      pointer-events: all;
+      vector-effect: non-scaling-stroke;
+      transition: stroke 150ms ease, stroke-width 150ms ease, filter 150ms ease;
+    }
+    svg [data-legend-count-badge] { pointer-events: none; }
+    svg [data-legend-count-badge] rect {
+      fill: var(--mask);
+      stroke: var(--panel-border);
+      stroke-width: 1;
+      vector-effect: non-scaling-stroke;
+    }
+    svg [data-legend-count-badge] text {
+      fill: var(--text-muted);
+      font-size: 8px;
+      font-weight: 700;
+      text-anchor: middle;
+    }
+    svg [data-legend-kind][role="button"]:hover [data-legend-hit] {
+      stroke: color-mix(in srgb, var(--database-stroke) 58%, transparent);
+    }
+    svg [data-legend-kind][role="button"]:focus-visible [data-legend-hit] {
+      stroke: var(--frontend-stroke);
+      stroke-width: 1.8;
+      filter: drop-shadow(0 0 3px var(--frontend-stroke));
+    }
+    svg [data-legend-kind][data-legend-selected] [data-legend-hit] {
+      stroke: var(--database-stroke);
+      stroke-width: 2.2;
+      stroke-dasharray: 3 2;
+    }
+    svg [data-legend-kind][data-legend-selected] [data-legend-count-badge] rect {
+      stroke: var(--database-stroke);
+      stroke-width: 1.8;
+    }
+    svg [data-legend-kind][data-legend-zero] { opacity: 0.44; }
+    svg[data-preset="signal-flow"] [data-legend-kind][data-legend-selected] [data-legend-hit] {
+      filter: drop-shadow(0 0 4px var(--database-stroke));
+    }
+    svg[data-preset="blueprint"] [data-legend-hit],
+    svg[data-preset="blueprint"] [data-legend-count-badge] rect { rx: 0; filter: none; }
+    svg[data-legend-preview-active] [data-node-id],
+    svg[data-legend-preview-active] [data-edge-from] { opacity: 0.11; }
+    svg[data-legend-preview-active] [data-legend-preview-match] { opacity: 1; }
+    svg[data-legend-preview-active] [data-legend-preview-peer] { opacity: 0.62; }
+    svg[data-legend-preview-active] [data-legend-preview-selected] {
+      filter: drop-shadow(0 0 8px var(--database-stroke));
+    }
+    svg[data-lens-active] [data-node-id],
+    svg[data-lens-active] [data-edge-from] { opacity: 0.11; }
+    svg[data-lens-active] [data-lens-match] { opacity: 1; }
+    svg[data-lens-active] [data-lens-peer] { opacity: 0.62; }
+    svg[data-lens-active] [data-lens-selected] {
+      filter: drop-shadow(0 0 10px var(--database-stroke));
+    }
+    .semantic-lens-overlay { pointer-events: none; }
+    .semantic-lens-flow {
+      fill: none;
+      stroke-width: 3.05;
+      stroke-linecap: round;
+      stroke-dasharray: 0.075 0.925;
+      stroke-dashoffset: 0;
+      vector-effect: non-scaling-stroke;
+      opacity: 0.9;
+      animation: archify-semantic-lens-flow 1.35s linear 1 both;
+      animation-delay: var(--lens-flow-delay, 0s);
+    }
+    .semantic-lens-flow[data-direction="out"],
+    .semantic-lens-flow[data-direction="forward"] {
+      stroke: var(--frontend-stroke);
+      filter: drop-shadow(0 0 3px var(--frontend-stroke));
+    }
+    .semantic-lens-flow[data-direction="in"],
+    .semantic-lens-flow[data-direction="reverse"] {
+      stroke: var(--database-stroke);
+      filter: drop-shadow(0 0 3px var(--database-stroke));
+    }
+    .semantic-lens-flow[data-direction="within"] {
+      stroke: var(--messagebus-stroke);
+      filter: drop-shadow(0 0 3px var(--messagebus-stroke));
+    }
+    svg[data-preset="signal-flow"] .semantic-lens-flow {
+      stroke-width: 3.7;
+      opacity: 1;
+    }
+    svg[data-preset="signal-flow"] .semantic-lens-flow[data-direction="out"],
+    svg[data-preset="signal-flow"] .semantic-lens-flow[data-direction="forward"] {
+      filter: drop-shadow(0 0 6px var(--frontend-stroke));
+    }
+    svg[data-preset="signal-flow"] .semantic-lens-flow[data-direction="in"],
+    svg[data-preset="signal-flow"] .semantic-lens-flow[data-direction="reverse"] {
+      filter: drop-shadow(0 0 6px var(--database-stroke));
+    }
+    svg[data-preset="signal-flow"] .semantic-lens-flow[data-direction="within"] {
+      filter: drop-shadow(0 0 6px var(--messagebus-stroke));
+    }
+    svg[data-preset="blueprint"] .semantic-lens-flow {
+      stroke-width: 2.45;
+      stroke-linecap: square;
+      filter: none;
+      opacity: 0.78;
+    }
+    html[data-embed="true"] .semantic-lens-overlay { display: none; }
+    svg[data-focus-active] [data-node-id],
+    svg[data-focus-active] [data-edge-from] { opacity: 0.13; }
+    svg[data-focus-active] [data-focus-match] { opacity: 1; }
+    svg[data-focus-active] [data-focus-selected] {
+      filter: drop-shadow(0 0 10px var(--frontend-stroke));
+    }
+
+    /* Authored Reachability is a bounded graph query over the relationships
+       already present in the artifact. Upstream walks incoming edges;
+       downstream walks outgoing edges. It never claims runtime causality and
+       changes only viewer emphasis, not canonical geometry or export bytes. */
+    svg[data-reach-active] [data-node-id],
+    svg[data-reach-active] [data-edge-from] { opacity: 0.09; }
+    svg[data-reach-active] [data-reach-match] { opacity: 1; }
+    svg[data-reach-active="upstream"] [data-reach-origin] {
+      filter: drop-shadow(0 0 11px var(--database-stroke));
+    }
+    svg[data-reach-active="downstream"] [data-reach-origin] {
+      filter: drop-shadow(0 0 11px var(--backend-stroke));
+    }
+    svg[data-reach-active="upstream"] [data-edge-from][data-reach-match] {
+      filter: drop-shadow(0 0 4px color-mix(in srgb, var(--database-stroke) 72%, transparent));
+    }
+    svg[data-reach-active="downstream"] [data-edge-from][data-reach-match] {
+      filter: drop-shadow(0 0 4px color-mix(in srgb, var(--backend-stroke) 72%, transparent));
+    }
+    svg[data-preset="blueprint"][data-reach-active] [data-reach-origin],
+    svg[data-preset="blueprint"][data-reach-active] [data-edge-from][data-reach-match] {
+      filter: none;
+    }
+
+    /* Direct Relationship Explorer makes authored paths a real input surface
+       without changing their visible stroke or canonical SVG. A transparent
+       runtime rail supplies forgiving pointer geometry; the exact authored
+       path and endpoints continue to carry every visible state. */
+    .relationship-hit-overlay { pointer-events: none; }
+    .relationship-hit-target { outline: none; }
+    .relationship-hit-rail {
+      fill: none;
+      stroke: transparent;
+      stroke-width: 24;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      vector-effect: non-scaling-stroke;
+      pointer-events: stroke;
+      cursor: pointer;
+    }
+    .relationship-focus-rail {
+      fill: none;
+      stroke: color-mix(in srgb, var(--frontend-stroke) 34%, transparent);
+      stroke-width: 6;
+      stroke-dasharray: 2 4;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      vector-effect: non-scaling-stroke;
+      pointer-events: none;
+      opacity: 0;
+    }
+    .relationship-hit-target:focus-visible .relationship-focus-rail {
+      opacity: 1;
+    }
+    svg[data-preset="blueprint"] .relationship-hit-target:focus-visible .relationship-focus-rail {
+      stroke-linecap: square;
+      filter: none;
+    }
+    svg[data-relationship-direct-active] [data-node-id],
+    svg[data-relationship-direct-active] [data-edge-from] { opacity: 0.16; }
+    svg[data-relationship-direct-active] [data-relationship-preview],
+    svg[data-relationship-direct-active] [data-relationship-preview-node] { opacity: 1; }
+    svg[data-focus-active]:not([data-relationship-pin-active]) .relationship-hit-rail,
+    svg[data-story-active] .relationship-hit-rail,
+    svg[data-route-picking] .relationship-hit-rail,
+    svg[data-route-active] .relationship-hit-rail,
+    svg[data-lens-active] .relationship-hit-rail,
+    svg[data-chapter-preview] .relationship-hit-rail { pointer-events: none; }
+    html[data-embed="true"] .relationship-hit-overlay { display: none; }
+    @media (hover: none), (pointer: coarse) {
+      .relationship-hit-rail { stroke-width: 24; }
+    }
+
+    /* Relationship Preview is temporary exploration state layered on top of
+       neighborhood focus. It changes emphasis only; exported geometry and the
+       relationship's original solid/dashed visual language stay untouched. */
+    svg[data-relationship-preview-active] [data-focus-match] { opacity: 0.18; }
+    svg[data-relationship-preview-active] [data-relationship-preview],
+    svg[data-relationship-preview-active] [data-relationship-preview-node] { opacity: 1; }
+    svg[data-relationship-preview-active] [data-relationship-preview] {
+      filter: drop-shadow(0 0 5px var(--arrow-emphasis));
+    }
+    svg[data-relationship-preview-active] [data-relationship-preview] path,
+    svg[data-relationship-preview-active] path[data-relationship-preview],
+    svg[data-relationship-preview-active] [data-relationship-preview] line,
+    svg[data-relationship-preview-active] line[data-relationship-preview],
+    svg[data-relationship-preview-active] [data-relationship-preview] polyline,
+    svg[data-relationship-preview-active] polyline[data-relationship-preview] {
+      stroke-width: 2.75;
+    }
+    svg[data-relationship-preview-active] [data-relationship-preview-source] {
+      filter: drop-shadow(0 0 7px var(--frontend-stroke));
+    }
+    svg[data-relationship-preview-active] [data-relationship-preview-target] {
+      filter: drop-shadow(0 0 7px var(--database-stroke));
+    }
+    .relationship-pulse-overlay { pointer-events: none; }
+    .relationship-flow-pulse {
+      fill: none;
+      stroke: var(--arrow-emphasis);
+      stroke-width: 3.35;
+      stroke-linecap: round;
+      stroke-dasharray: 0.085 0.915;
+      stroke-dashoffset: 0;
+      vector-effect: non-scaling-stroke;
+      opacity: 0;
+      filter: drop-shadow(0 0 4px var(--arrow-emphasis));
+      animation: archify-relationship-pulse 1.2s linear 1 both;
+    }
+    svg[data-preset="signal-flow"] .relationship-flow-pulse {
+      stroke: var(--frontend-stroke);
+      stroke-width: 3.85;
+      filter: drop-shadow(0 0 7px var(--frontend-stroke));
+    }
+    svg[data-preset="blueprint"] .relationship-flow-pulse {
+      stroke-width: 2.5;
+      stroke-linecap: square;
+      filter: none;
+    }
+    svg[data-preset="editorial"] .relationship-flow-pulse {
+      stroke: var(--arrow-emphasis);
+      stroke-width: 2.75;
+      filter: none;
+    }
+    .semantic-flow-token {
+      color: var(--frontend-stroke);
+      opacity: 0;
+      pointer-events: none;
+    }
+    .relationship-flow-token {
+      animation: archify-relationship-token-life 1.2s linear 1 both;
+    }
+    .story-flow-token {
+      animation: archify-relationship-token-life 0.78s linear 1 both;
+    }
+    .semantic-flow-token-halo {
+      fill: var(--mask);
+      stroke: currentColor;
+      stroke-width: 1.1;
+      vector-effect: non-scaling-stroke;
+      opacity: 0.96;
+    }
+    .relationship-flow-token-shape {
+      fill: var(--mask);
+      stroke: currentColor;
+      stroke-width: 1.35;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      vector-effect: non-scaling-stroke;
+    }
+    .relationship-flow-token-ink {
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.05;
+      stroke-linecap: round;
+      vector-effect: non-scaling-stroke;
+    }
+    .relationship-flow-token-dot { fill: currentColor; stroke: none; }
+    .semantic-flow-token[data-token-kind="data"] { color: var(--database-stroke); }
+    .semantic-flow-token[data-token-kind="event"] { color: var(--messagebus-stroke); }
+    .semantic-flow-token[data-token-kind="security"] { color: var(--security-stroke); }
+    .semantic-flow-token[data-token-kind="state"] { color: var(--cloud-stroke); }
+    svg[data-preset="signal-flow"] .semantic-flow-token {
+      filter: drop-shadow(0 0 5px currentColor);
+    }
+    svg[data-preset="blueprint"] .semantic-flow-token { filter: none; }
+    svg[data-preset="editorial"] .semantic-flow-token { filter: none; }
+    html[data-embed="true"] .relationship-pulse-overlay { display: none; }
+
+    /* Intent Trace is a temporary, pre-click exploration layer. Related
+       topology stays readable while a short viewer-only signal runs over
+       cloned edge geometry; the authored edge remains untouched underneath. */
+    svg[data-intent-trace-active] [data-node-id],
+    svg[data-intent-trace-active] [data-edge-from] { opacity: 0.2; }
+    svg[data-intent-trace-active] [data-intent-trace-match] { opacity: 1; }
+    svg[data-intent-trace-active] [data-intent-trace-selected] {
+      filter: drop-shadow(0 0 10px var(--frontend-stroke));
+    }
+    .intent-trace-overlay { pointer-events: none; }
+    .intent-trace-flow {
+      fill: none;
+      stroke-width: 3.1;
+      stroke-linecap: round;
+      stroke-dasharray: 0.1 0.9;
+      stroke-dashoffset: 0;
+      vector-effect: non-scaling-stroke;
+      opacity: 0.94;
+      animation: archify-intent-trace-flow 1.15s linear 1 both;
+    }
+    .intent-trace-flow[data-direction="out"] {
+      stroke: var(--frontend-stroke);
+      filter: drop-shadow(0 0 4px var(--frontend-stroke));
+    }
+    .intent-trace-flow[data-direction="in"] {
+      stroke: var(--database-stroke);
+      filter: drop-shadow(0 0 4px var(--database-stroke));
+      animation-direction: reverse;
+    }
+    .intent-trace-flow[data-direction="loop"] {
+      stroke: var(--security-stroke);
+      filter: drop-shadow(0 0 4px var(--security-stroke));
+    }
+    svg[data-preset="blueprint"] [data-intent-trace-selected],
+    svg[data-preset="blueprint"] .intent-trace-flow {
+      filter: none;
+      stroke-linecap: square;
+    }
+    svg[data-preset="editorial"] [data-intent-trace-selected],
+    svg[data-preset="editorial"] .intent-trace-flow { filter: none; }
+    .intent-trace-status {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      clip-path: inset(50%);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* Route Probe separates a durable two-point query from selection and
+       one-hop hover. Only the chosen shortest directed path stays prominent;
+       the traveling signal is cloned viewer geometry and never authored SVG. */
+    svg[data-route-picking="target"] [data-node-id] { opacity: 0.24; }
+    svg[data-route-picking="target"] [data-route-candidate],
+    svg[data-route-picking="target"] [data-route-start] { opacity: 1; }
+    svg[data-route-picking] [data-node-id] { cursor: crosshair; }
+    svg[data-route-picking] [data-route-start] {
+      filter: drop-shadow(0 0 10px var(--frontend-stroke));
+    }
+    svg[data-route-active] [data-node-id],
+    svg[data-route-active] [data-edge-from] { opacity: 0.11; }
+    svg[data-route-active] [data-route-match] { opacity: 1; }
+    svg[data-route-active] [data-route-start] {
+      filter: drop-shadow(0 0 11px var(--frontend-stroke));
+    }
+    svg[data-route-active] [data-route-end] {
+      filter: drop-shadow(0 0 11px var(--security-stroke));
+    }
+    svg[data-route-active] [data-route-step]:not([data-route-start]):not([data-route-end]) {
+      filter: drop-shadow(0 0 7px var(--backend-stroke));
+    }
+    svg[data-route-journey] [data-route-match][data-route-journey-state="past"] { opacity: 0.62; }
+    svg[data-route-journey] [data-route-match][data-route-journey-state="future"] { opacity: 0.34; }
+    svg[data-route-journey] [data-route-match][data-route-journey-state="current"] { opacity: 1; }
+    svg[data-route-journey] [data-node-id][data-route-journey-current] {
+      filter: drop-shadow(0 0 10px var(--backend-stroke));
+    }
+    svg[data-route-journey] [data-edge-from][data-route-journey-current] {
+      opacity: 1;
+      filter: drop-shadow(0 0 6px var(--backend-stroke));
+    }
+    .route-probe-overlay { pointer-events: none; }
+    .route-journey-overlay { pointer-events: none; }
+    .route-probe-flow {
+      fill: none;
+      stroke: var(--backend-stroke);
+      stroke-width: 3.25;
+      stroke-linecap: round;
+      stroke-dasharray: 0.085 0.915;
+      stroke-dashoffset: 0;
+      vector-effect: non-scaling-stroke;
+      opacity: 0.96;
+      filter: drop-shadow(0 0 5px var(--backend-stroke));
+      animation: archify-route-probe-flow 1.1s cubic-bezier(0.22, 1, 0.36, 1) 1 both;
+      animation-delay: calc(var(--route-step, 0) * 0.16s);
+    }
+    .route-journey-flow {
+      fill: none;
+      stroke: var(--backend-stroke);
+      stroke-width: 3.5;
+      stroke-linecap: round;
+      stroke-dasharray: 0.1 0.9;
+      stroke-dashoffset: 0;
+      vector-effect: non-scaling-stroke;
+      opacity: 0;
+      filter: drop-shadow(0 0 6px var(--backend-stroke));
+      animation: archify-route-journey-flow 780ms cubic-bezier(0.22, 1, 0.36, 1) 1 both;
+    }
+    svg[data-preset="blueprint"] [data-route-start],
+    svg[data-preset="blueprint"] [data-route-end],
+    svg[data-preset="blueprint"] [data-route-step],
+    svg[data-preset="blueprint"] .route-probe-flow {
+      filter: none;
+      stroke-linecap: square;
+    }
+    svg[data-preset="blueprint"] .route-journey-flow {
+      filter: none;
+      stroke-linecap: square;
+    }
+    svg[data-preset="editorial"] [data-route-start],
+    svg[data-preset="editorial"] [data-route-end],
+    svg[data-preset="editorial"] [data-route-step],
+    svg[data-preset="editorial"] .route-probe-flow,
+    svg[data-preset="editorial"] .route-journey-flow { filter: none; }
+
+    svg[data-preset="editorial"] .c-grid {
+      stroke-dasharray: 1 4;
+      opacity: 0.48;
+    }
+    svg[data-preset="editorial"] .c-region {
+      fill: color-mix(in srgb, var(--cloud-fill) 48%, transparent);
+      stroke-dasharray: 9 4;
+    }
+    svg[data-preset="editorial"] [data-node-id]:hover,
+    svg[data-preset="editorial"] [data-node-id]:focus-visible,
+    svg[data-preset="editorial"][data-focus-active] [data-focus-selected] {
+      filter: drop-shadow(0 2px 2px color-mix(in srgb, var(--text) 18%, transparent));
+    }
+
+    svg[data-preset="blueprint"] .c-grid {
+      stroke-dasharray: 1 3;
+      opacity: 0.78;
+    }
+    svg[data-preset="blueprint"] .c-region {
+      fill: color-mix(in srgb, var(--cloud-fill) 58%, transparent);
+      stroke-dasharray: 12 4 2 4;
+    }
+    svg[data-preset="blueprint"] .c-security-group,
+    svg[data-preset="blueprint"] .c-lane { stroke-dasharray: 7 3; }
+    svg[data-preset="blueprint"] [data-node-id]:hover,
+    svg[data-preset="blueprint"] [data-node-id]:focus-visible {
+      filter: drop-shadow(0 0 3px var(--frontend-stroke));
+    }
+    svg[data-preset="blueprint"][data-focus-active] [data-focus-selected] {
+      filter: drop-shadow(0 0 3px var(--frontend-stroke));
+    }
+    svg[data-preset="blueprint"][data-focus-active][data-reach-active] [data-focus-selected][data-reach-origin] {
+      filter: none;
+    }
+    svg[data-preset="blueprint"][data-relationship-preview-active] [data-relationship-preview],
+    svg[data-preset="blueprint"][data-relationship-preview-active] [data-relationship-preview-source],
+    svg[data-preset="blueprint"][data-relationship-preview-active] [data-relationship-preview-target] {
+      filter: drop-shadow(0 0 3px var(--frontend-stroke));
+    }
+
+    /* Story Trail is a viewer-only overlay derived from the ordered focus IDs
+       of the active guided view. The authored edge stays underneath with its
+       original color, dash pattern, marker, and geometry intact. */
+    .story-trail-overlay { pointer-events: none; }
+    .story-carrier-overlay { pointer-events: none; }
+    .story-trail-flow {
+      fill: none;
+      stroke: var(--frontend-stroke);
+      stroke-width: 2.8;
+      stroke-linecap: round;
+      vector-effect: non-scaling-stroke;
+      opacity: 0.34;
+      filter: drop-shadow(0 0 2px var(--frontend-stroke));
+    }
+    svg[data-story-beat] [data-story-step] {
+      opacity: 0.22;
+      filter: saturate(0.42);
+      transition: opacity 180ms ease, filter 180ms ease;
+    }
+    svg[data-story-beat] [data-story-step][data-story-beat-state="past"] {
+      opacity: 0.72;
+      filter: saturate(0.82);
+    }
+    svg[data-story-beat] [data-story-step][data-story-beat-state="next"] {
+      opacity: 0.5;
+      filter: saturate(0.66);
+    }
+    svg[data-story-beat] [data-story-step][data-story-beat-state="active"] {
+      opacity: 1;
+      filter: drop-shadow(0 0 7px var(--frontend-stroke));
+      animation: archify-story-beat-node 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    svg[data-story-beat] [data-edge-from][data-story-beat-step] {
+      opacity: 0.16;
+      transition: opacity 160ms ease;
+    }
+    svg[data-story-beat] [data-edge-from][data-story-beat-step][data-story-beat-state="past"] { opacity: 0.58; }
+    svg[data-story-beat] [data-edge-from][data-story-beat-step][data-story-beat-state="next"] { opacity: 0.34; }
+    svg[data-story-beat] [data-edge-from][data-story-beat-step][data-story-beat-state="active"] { opacity: 1; }
+    svg[data-story-beat] .story-trail-flow { opacity: 0; transition: opacity 160ms ease; }
+    svg[data-story-beat] .story-trail-flow[data-story-beat-state="past"] { opacity: 0.34; }
+    svg[data-story-beat] .story-trail-flow[data-story-beat-state="next"] { opacity: 0.2; }
+    svg[data-story-beat] .story-trail-flow[data-story-beat-state="active"] { opacity: 0.92; }
+    svg[data-story-beat] .story-trail-flow[data-story-pulse="true"] {
+      stroke-dasharray: 2 13;
+      stroke-dashoffset: 30;
+      opacity: 0.92;
+      animation: archify-story-flow 0.78s linear 1 both;
+    }
+    svg[data-preset="blueprint"] .story-trail-flow {
+      stroke-linecap: square;
+      filter: none;
+      opacity: 0.5;
+    }
+    svg[data-preset="blueprint"][data-story-beat] [data-story-step][data-story-beat-state="active"] {
+      filter: none;
+      animation: none;
+    }
+    svg[data-preset="editorial"] .story-trail-flow { filter: none; }
+    svg[data-preset="editorial"][data-story-beat] [data-story-step][data-story-beat-state="active"] {
+      filter: drop-shadow(0 2px 2px color-mix(in srgb, var(--text) 16%, transparent));
+    }
+
+    /* Chapter Delta Preview is a static, pre-commit comparison between two
+       chapter focus sets. Symbols in the rail carry the meaning without color;
+       these SVG rules only make exact stable-ID membership easier to scan. */
+    svg[data-chapter-preview] [data-node-id],
+    svg[data-chapter-preview] [data-edge-from] {
+      opacity: 0.1 !important;
+      filter: none !important;
+      transition: none !important;
+    }
+    svg[data-chapter-preview] .story-trail-overlay { opacity: 0.08 !important; }
+    svg[data-chapter-preview] [data-node-id][data-chapter-preview-role="stay"] {
+      opacity: 0.76 !important;
+      filter: saturate(0.7) !important;
+    }
+    svg[data-chapter-preview] [data-node-id][data-chapter-preview-role="enter"] {
+      opacity: 1 !important;
+      filter: saturate(1.2) !important;
+    }
+    svg[data-chapter-preview] [data-node-id][data-chapter-preview-role="leave"] {
+      opacity: 0.28 !important;
+      filter: grayscale(0.72) !important;
+    }
+    svg[data-preset="blueprint"][data-chapter-preview] [data-node-id] { filter: none !important; }
+
+    /* Dashed boundary variants */
+    .c-security-group { fill: transparent; stroke: var(--security-stroke); stroke-dasharray: 4,4; }
+    .c-region         { fill: rgba(251, 191, 36, 0.05); stroke: var(--cloud-stroke); stroke-dasharray: 8,4; }
+    .c-lane           { fill: var(--lane-fill); stroke: var(--lane-stroke); stroke-dasharray: 6,6; }
+
+    /* Optional trace animation, enabled only by meta.animation = "trace".
+       The ordinary viewer performs one ambient pass and then restores the
+       authored solid/security/async line language. WebM samples the same
+       authored geometry into an explicit canvas timeline. */
+    html[data-ambient-motion="running"] svg[data-animation="trace"] [data-animate="edge"] {
+      animation: archify-edge-flow 2.4s linear 1;
+      animation-delay: calc(var(--step, 0) * 160ms);
+    }
+    html[data-ambient-motion="running"] svg[data-animation="trace"] [data-animate="node"] {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: archify-node-pulse 3.6s ease-in-out 1;
+      animation-delay: calc(var(--step, 0) * 160ms);
+    }
+    svg[data-preset="signal-flow"][data-animation="trace"] [data-animate="edge"] {
+      stroke-linecap: round;
+      filter: drop-shadow(0 0 3px var(--arrow-emphasis));
+      animation-duration: 1.75s;
+    }
+    svg[data-preset="signal-flow"][data-animation="trace"] [data-animate="node"] {
+      animation-duration: 3.1s;
+    }
+    svg[data-preset="blueprint"][data-animation="trace"] [data-animate="edge"] {
+      stroke-linecap: square;
+      filter: none;
+      animation-duration: 2.15s;
+    }
+    svg[data-preset="blueprint"][data-animation="trace"] [data-animate="node"] {
+      animation-name: archify-blueprint-node-pulse;
+      animation-duration: 3.8s;
+    }
+    svg[data-preset="editorial"][data-animation="trace"] [data-animate="edge"] {
+      filter: none;
+      animation-duration: 2.2s;
+    }
+    svg[data-preset="editorial"][data-animation="trace"] [data-animate="node"] {
+      animation-name: archify-editorial-node-pulse;
+      animation-duration: 3.5s;
+    }
+    /* Embedded proofs are static until a named Story Trail chapter is played.
+       This keeps proof grids calm and ensures ?play=1 stops all viewer motion
+       after one 3.2 second chapter instead of leaving ambient trace loops on. */
+    html[data-embed="true"] svg[data-animation="trace"] [data-animate],
+    html[data-share-playback="true"] svg[data-animation="trace"] [data-animate] {
+      animation: none !important;
+      stroke-dashoffset: 0;
+    }
+    @keyframes archify-edge-flow {
+      0% { stroke-dasharray: 10 8; stroke-dashoffset: 54; opacity: 0.42; }
+      88% { stroke-dasharray: 10 8; stroke-dashoffset: 0; opacity: 1; }
+      99.9% { stroke-dasharray: 10 8; stroke-dashoffset: 0; opacity: 1; }
+      100% { stroke-dashoffset: 0; opacity: 1; }
+    }
+    @keyframes archify-node-pulse {
+      0%, 72%, 100% { filter: none; stroke-width: 1.5; }
+      18%, 36% {
+        filter: drop-shadow(0 0 8px var(--arrow-emphasis));
+        stroke-width: 2.4;
+      }
+    }
+    @keyframes archify-blueprint-node-pulse {
+      0%, 72%, 100% { opacity: 1; filter: none; }
+      18%, 36% { opacity: 0.72; filter: drop-shadow(0 0 2px var(--frontend-stroke)); }
+    }
+    @keyframes archify-editorial-node-pulse {
+      0%, 72%, 100% { opacity: 1; filter: none; }
+      18%, 36% { opacity: 0.78; filter: drop-shadow(0 2px 2px color-mix(in srgb, var(--text) 18%, transparent)); }
+    }
+    @keyframes archify-signal-scan {
+      0%, 18% { opacity: 1; transform: translateX(-70%); }
+      70% { opacity: 1; transform: translateX(70%); }
+      100% { opacity: 0; transform: translateX(70%); }
+    }
+    @keyframes archify-radar-live {
+      0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--backend-stroke) 52%, transparent); }
+      55%, 100% { box-shadow: 0 0 0 0.32rem transparent; }
+    }
+    @keyframes archify-guided-progress {
+      from { transform: scaleX(var(--guided-progress-start, 0)); }
+      to { transform: scaleX(1); }
+    }
+    @keyframes archify-story-flow {
+      to { stroke-dashoffset: 0; }
+    }
+    @keyframes archify-intent-trace-flow {
+      0% { opacity: 0.28; stroke-dashoffset: 0; }
+      12%, 78% { opacity: 0.94; }
+      100% { opacity: 0; stroke-dashoffset: -1; }
+    }
+    @keyframes archify-route-probe-flow {
+      0% { stroke-dashoffset: 0; opacity: 0.96; }
+      78% { stroke-dashoffset: -1; opacity: 0.96; }
+      100% { stroke-dasharray: none; stroke-dashoffset: 0; opacity: 0.58; }
+    }
+    @keyframes archify-route-journey-flow {
+      0% { opacity: 0.16; stroke-dashoffset: 0; }
+      14%, 76% { opacity: 1; }
+      100% { opacity: 0; stroke-dashoffset: -1; }
+    }
+    @keyframes archify-semantic-lens-flow {
+      0% { opacity: 0.2; stroke-dashoffset: 0; }
+      12%, 78% { opacity: 0.9; }
+      100% { opacity: 0; stroke-dashoffset: -1; }
+    }
+    @keyframes archify-relationship-pulse {
+      0% { opacity: 0.18; stroke-dashoffset: 0; }
+      10%, 76% { opacity: 0.98; }
+      100% { opacity: 0; stroke-dashoffset: -1; }
+    }
+    @keyframes archify-relationship-token-life {
+      0%, 7% { opacity: 0; }
+      13%, 82% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+    @keyframes archify-story-beat-node {
+      from { opacity: 0.48; filter: saturate(0.6); }
+      58% { opacity: 1; filter: drop-shadow(0 0 10px var(--frontend-stroke)); }
+      to { opacity: 1; filter: drop-shadow(0 0 7px var(--frontend-stroke)); }
+    }
+    @keyframes archify-share-cue-enter {
+      from { opacity: 0; transform: translate(-50%, -0.45rem); }
+      to { opacity: 1; transform: translate(-50%, 0); }
+    }
+    @keyframes archify-share-cue-pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.48; transform: scale(0.78); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html[data-preset="signal-flow"] .diagram-container::before {
+        animation: none !important;
+      }
+      .pulse-dot { animation: none !important; }
+      svg[data-animation="trace"] [data-animate] {
+        animation: none !important;
+        stroke-dashoffset: 0;
+      }
+      .guided-view-progress span {
+        animation: none !important;
+        transform: scaleX(1) !important;
+      }
+      .story-trail-flow,
+      .intent-trace-flow,
+      .route-probe-flow,
+      .semantic-lens,
+      .diagram-guide,
+      [data-story-step],
+      .overview-map-live,
+      .guided-view-stop,
+      .share-chapter-cue,
+      .chapter-handoff-anchor,
+      .share-chapter-state::before,
+      .share-chapter-progress span { animation: none !important; }
+      .guided-view-chapter,
+      svg[data-chapter-preview] [data-node-id],
+      svg[data-chapter-preview] [data-edge-from] { transition: none !important; }
+      svg[data-story-playing="true"] .story-trail-flow {
+        stroke-dasharray: none;
+        stroke-dashoffset: 0;
+        opacity: 0.55;
+      }
+      .intent-trace-flow {
+        animation: none !important;
+        stroke-dasharray: none;
+        stroke-dashoffset: 0;
+        opacity: 0.72;
+      }
+      .route-probe-flow {
+        animation: none !important;
+        stroke-dasharray: none;
+        stroke-dashoffset: 0;
+        opacity: 0.78;
+      }
+      .route-journey-overlay,
+      .story-carrier-overlay { display: none !important; }
+      .semantic-lens-flow {
+        animation: none !important;
+        stroke-dasharray: none;
+        stroke-width: 2.2;
+        opacity: 0.34;
+        filter: none;
+      }
+      .relationship-pulse-overlay { display: none !important; }
+      .guided-view-chapter { transition: none !important; }
+      .source-evidence-beacon,
+      svg [data-node-id], svg [data-edge-from], svg [data-detail], svg [data-detail-anchor], svg [data-legend-hit], svg { transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Toolbar: theme, live visual style, trace motion, presentation stage, and export.
+       Motion appears only for trace-enabled artifacts and has no shortcut;
+       Keyboard: T toggles theme, S cycles style, F toggles the stage, E opens export. -->
+  <div class="toolbar" role="toolbar" aria-label="Diagram actions">
+    <button id="btn-theme" type="button"
+            title="Toggle theme (T)"
+            aria-label="Toggle color theme"
+            aria-pressed="false">
+      <span id="theme-icon" class="toolbar-icon" aria-hidden="true"></span>
+      <span id="theme-label">Dark</span>
+    </button>
+    <div class="preset-wrap">
+      <button id="btn-preset" type="button"
+              title="Choose visual style (S cycles)"
+              aria-label="Choose visual style"
+              aria-haspopup="menu"
+              aria-expanded="false"
+              aria-controls="preset-menu"
+              aria-keyshortcuts="S">
+        <span class="preset-control-mark" aria-hidden="true"></span>
+        <span id="preset-label">Style</span>
+        <span class="toolbar-icon toolbar-chevron" aria-hidden="true"></span>
+      </button>
+      <div class="preset-menu" id="preset-menu" role="menu" aria-label="Visual style">
+        <div class="preset-menu-heading" role="presentation"><span>Visual identity</span><span>S cycles</span></div>
+        <button class="preset-option" data-preset-value="classic" type="button" role="menuitemradio" aria-checked="false" tabindex="-1">
+          <span class="preset-option-swatch classic" aria-hidden="true"></span>
+          <span class="preset-option-copy"><strong>Classic</strong><small>Stable technical default</small></span>
+          <span class="preset-option-check" aria-hidden="true"></span>
+        </button>
+        <button class="preset-option" data-preset-value="signal-flow" type="button" role="menuitemradio" aria-checked="false" tabindex="-1">
+          <span class="preset-option-swatch signal-flow" aria-hidden="true"></span>
+          <span class="preset-option-copy"><strong>Signal Flow</strong><small>Motion-forward presentation</small></span>
+          <span class="preset-option-check" aria-hidden="true"></span>
+        </button>
+        <button class="preset-option" data-preset-value="blueprint" type="button" role="menuitemradio" aria-checked="false" tabindex="-1">
+          <span class="preset-option-swatch blueprint" aria-hidden="true"></span>
+          <span class="preset-option-copy"><strong>Blueprint</strong><small>Engineering review</small></span>
+          <span class="preset-option-check" aria-hidden="true"></span>
+        </button>
+        <button class="preset-option" data-preset-value="editorial" type="button" role="menuitemradio" aria-checked="false" tabindex="-1">
+          <span class="preset-option-swatch editorial" aria-hidden="true"></span>
+          <span class="preset-option-copy"><strong>Editorial</strong><small>Publication and launch notes</small></span>
+          <span class="preset-option-check" aria-hidden="true"></span>
+        </button>
+      </div>
+    </div>
+    <button id="btn-motion" type="button" hidden
+            title="Pause motion"
+            aria-label="Pause motion"
+            aria-pressed="true">
+      <span class="motion-control-dot" aria-hidden="true"></span>
+      <span id="motion-label">Live</span>
+    </button>
+    <button id="btn-present" type="button"
+            title="Presentation stage (F)"
+            aria-label="Enter presentation stage"
+            aria-pressed="false">
+      <span id="present-icon" class="toolbar-icon" aria-hidden="true"></span>
+      <span id="present-label">Present</span>
+    </button>
+    <div class="export-wrap">
+      <button id="btn-export" type="button"
+              title="Export diagram (E)"
+              aria-label="Export diagram"
+              aria-haspopup="menu"
+              aria-expanded="false"
+              aria-controls="export-menu">
+        Export <span class="toolbar-icon toolbar-chevron" aria-hidden="true"></span>
+      </button>
+      <div class="export-menu" id="export-menu" role="menu" aria-label="Export">
+        <div class="export-menu-header" role="presentation">
+          <div><strong>Export diagram</strong><span>Portable, clean outputs</span></div>
+          <kbd>E</kbd>
+        </div>
+        <div class="export-menu-section" role="group" aria-label="Share">
+          <span class="export-menu-heading" aria-hidden="true">Share</span>
+          <button data-format="share-card" type="button" role="menuitem" tabindex="-1"><span class="export-item-copy"><strong>Share Card</strong><small class="hint">1200&times;630 PNG</small></span></button>
+          <button data-action="route-share-card" type="button" role="menuitem" tabindex="-1" hidden disabled><span class="export-item-copy"><strong>Route Share Card</strong><small class="hint">1200&times;630 PNG</small></span></button>
+          <button data-action="reach-share-card" type="button" role="menuitem" tabindex="-1" hidden disabled><span class="export-item-copy"><strong>Reach Share Card</strong><small class="hint">1200&times;630 PNG</small></span></button>
+          <button data-action="copy-share-card" type="button" role="menuitem" tabindex="-1"><span class="export-item-copy"><strong>Copy Share Card</strong><small class="hint">PNG to clipboard</small></span></button>
+          <button data-action="copy" type="button" role="menuitem" tabindex="-1"><span class="export-item-copy"><strong>Copy diagram</strong><small class="hint">PNG to clipboard</small></span></button>
+        </div>
+        <div class="export-menu-section" role="group" aria-label="Raster images">
+          <span class="export-menu-heading" aria-hidden="true">Image</span>
+          <button data-format="png" type="button" role="menuitem" tabindex="-1"><span class="export-item-copy"><strong>PNG</strong><small class="hint">Lossless image</small></span></button>
+          <button data-format="jpeg" type="button" role="menuitem" tabindex="-1"><span class="export-item-copy"><strong>JPEG</strong><small class="hint">Compact image</small></span></button>
+          <button data-format="webp" type="button" role="menuitem" tabindex="-1"><span class="export-item-copy"><strong>WebP</strong><small class="hint">Modern image</small></span></button>
+        </div>
+        <div class="export-menu-section" role="group" aria-label="Vector and motion">
+          <span class="export-menu-heading" aria-hidden="true">Vector &amp; motion</span>
+          <button data-format="svg" type="button" role="menuitem" tabindex="-1"><span class="export-item-copy"><strong>SVG</strong><small class="hint">Editable vector</small></span></button>
+          <button data-format="webm" type="button" role="menuitem" tabindex="-1"><span class="export-item-copy"><strong>WebM</strong><small class="hint">6s motion</small></span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div class="header-row">
+        <div class="pulse-dot"></div>
+        <h1>LLM Wiki 工业知识库架构</h1>
+      </div>
+    </div>
+
+    <script id="archify-guided-views-data" type="application/json">[{"id":"qa-main-path","label":"问答主链路","focus":["web","api","qa","sqlite","deepseek"],"note":"从提问到证据检索、受约束生成与 SSE 流式返回的完整链路。"},{"id":"wiki-build","label":"编译式 Wiki 闭环","focus":["wiki","content","api","web"],"note":"只读 raw 源经确定性编译器生成可再生的知识页与 manifest.json。"},{"id":"graph-build","label":"图谱抽取","focus":["graph","content","output"],"note":"从编译产物经本地规则抽取节点与边，无需模型与网络。"},{"id":"eval-loop","label":"评估闭环","focus":["eval","qa","sqlite"],"note":"16 题评估经问答服务执行，驱动检索优化并产出回归报告（output/eval）。"}]</script>
+
+    <div class="guided-views no-print" id="guided-views" hidden aria-label="Guided diagram views">
+      <button id="guided-view-prev" type="button" aria-label="Previous guided view" title="Previous guided view ([)">&#8592;</button>
+      <div class="guided-view-copy">
+        <div class="guided-view-meta">
+          <span>Guided views</span>
+          <span id="guided-view-count"></span>
+          <span class="guided-view-progress" aria-hidden="true"><span id="guided-view-progress-bar"></span></span>
+          <span class="guided-view-handoff" id="guided-view-handoff" hidden aria-hidden="true"></span>
+        </div>
+        <strong id="guided-view-label">Explore this system</strong>
+        <small id="guided-view-note" aria-live="polite" aria-atomic="true">Step through curated paths without changing the source diagram.</small>
+        <div class="guided-view-trail" id="guided-view-trail" hidden role="group" aria-label="Story trail"></div>
+        <div class="guided-story-caption" id="guided-story-caption" hidden aria-live="polite" aria-atomic="true">
+          <span class="guided-story-caption-index" id="guided-story-caption-index">Beat</span>
+          <strong id="guided-story-caption-route"></strong>
+          <small id="guided-story-caption-detail"></small>
+          <span class="guided-story-caption-next" id="guided-story-caption-next" hidden aria-hidden="true">
+            <small>Next</small>
+            <strong id="guided-story-caption-next-label"></strong>
+          </span>
+        </div>
+      </div>
+      <button id="guided-view-next" type="button" aria-label="Next guided view" title="Next guided view (])">&#8594;</button>
+      <div class="guided-view-actions">
+        <button class="guided-view-play" id="guided-view-play" type="button" aria-label="Play guided story" aria-pressed="false" title="Play guided story (P)">
+          <span id="guided-view-play-icon" aria-hidden="true">&#9654;</span>
+          <span id="guided-view-play-label">Play story</span>
+        </button>
+        <button class="guided-view-beat-link" id="guided-view-beat-link" type="button" aria-label="Select a Story Beat to copy its exact link" title="Select a Story Beat to copy its exact link" disabled>
+          <span aria-hidden="true">&#35;</span>
+          <span id="guided-view-beat-link-label">Copy moment</span>
+        </button>
+        <button class="guided-view-all" id="guided-view-all" type="button" aria-label="Show entire diagram">Show all</button>
+      </div>
+      <nav class="guided-view-index" id="guided-view-index" aria-label="Story chapters">
+        <ol class="guided-view-chapters" id="guided-view-chapters"></ol>
+      </nav>
+    </div>
+
+    <!-- Main Diagram -->
+    <div class="diagram-container" data-detail-level="read">
+      <svg viewBox="0 0 1600 830" role="img" aria-labelledby="archify-diagram-title archify-diagram-description" data-preset="classic" data-quality-profile="showcase">
+        <title id="archify-diagram-title">LLM Wiki 工业知识库架构</title>
+        <desc id="archify-diagram-description">A architecture diagram generated by Archify.</desc>
+        <!-- Definitions -->
+        <defs>
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" class="m-default" />
+          </marker>
+          <marker id="arrowhead-emphasis" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" class="m-emphasis" />
+          </marker>
+          <marker id="arrowhead-security" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" class="m-security" />
+          </marker>
+          <marker id="arrowhead-dashed" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" class="m-dashed" />
+          </marker>
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" class="c-grid" stroke-width="0.5"/>
+          </pattern>
+        </defs>
+
+        <!-- Background Grid -->
+        <rect width="100%" height="100%" fill="url(#grid)" />
+
+        <!-- Boundaries (behind everything) -->
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="region" data-composition-frame-id="0" x="10" y="130" width="250" height="134" rx="12" class="c-region" stroke-width="1"/>
+        <text x="18" y="148" class="t-cloud" font-size="9" font-weight="600">apps/web · Next.js 16</text>
+
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="region" data-composition-frame-id="1" x="10" y="10" width="250" height="114" rx="12" class="c-region" stroke-width="1"/>
+        <text x="18" y="28" class="t-cloud" font-size="9" font-weight="600">packages/contracts</text>
+
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="region" data-composition-frame-id="2" x="300" y="120" width="820" height="150" rx="12" class="c-region" stroke-width="1"/>
+        <text x="308" y="138" class="t-cloud" font-size="9" font-weight="600">apps/api · Fastify 服务端</text>
+
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="region" data-composition-frame-id="3" x="10" y="370" width="1360" height="134" rx="12" class="c-region" stroke-width="1"/>
+        <text x="18" y="388" class="t-cloud" font-size="9" font-weight="600">apps/api · 业务服务层</text>
+
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="region" data-composition-frame-id="4" x="10" y="570" width="835" height="134" rx="12" class="c-region" stroke-width="1"/>
+        <text x="18" y="588" class="t-cloud" font-size="9" font-weight="600">存储与产物层</text>
+
+        <!-- Connection paths (before components for correct z-order) -->
+        <path data-edge-from="web" data-edge-to="api" data-edge-label="REST · SSE" data-edge-key="0" data-edge-id="web-api" data-composition-points="230,202;254,202;254,218;306,218;306,200;330,200" d="M 230 202 L 246 202 Q 254 202 254 210 L 254 210 Q 254 218 262 218 L 298 218 Q 306 218 306 210 L 306 208 Q 306 200 314 200 L 330 200" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <path data-edge-from="contracts" data-edge-to="web" data-edge-label="类型 + 演示数据兜底" data-edge-key="1" data-edge-id="contracts-web" data-composition-points="135,104;135,160" d="M 135 104 L 135 160" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
+        <path data-edge-from="contracts" data-edge-to="api" data-edge-label="共享类型契约" data-edge-key="2" data-edge-id="contracts-api" data-composition-points="230,72;280,72;280,105;435,105;435,150" d="M 230 72 L 272 72 Q 280 72 280 80 L 280 97 Q 280 105 288 105 L 427 105 Q 435 105 435 113 L 435 150" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
+        <path data-edge-from="api" data-edge-to="qa" data-edge-label="问答路由" data-edge-key="3" data-edge-id="api-qa" data-composition-points="540,200;564,200;564,216;876,216;876,192;900,192" d="M 540 200 L 556 200 Q 564 200 564 208 L 564 208 Q 564 216 572 216 L 868 216 Q 876 216 876 208 L 876 200 Q 876 192 884 192 L 900 192" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <path data-edge-from="qa" data-edge-to="deepseek" data-edge-label="chat/completions 受约束生成" data-edge-key="4" data-edge-id="qa-deepseek" data-composition-points="1090,192;1114,192;1114,218;1336,218;1336,202;1360,202" d="M 1090 192 L 1106 192 Q 1114 192 1114 200 L 1114 210 Q 1114 218 1122 218 L 1328 218 Q 1336 218 1336 210 L 1336 210 Q 1336 202 1344 202 L 1360 202" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <path data-edge-from="qa" data-edge-to="sqlite" data-edge-label="486 证据片段检索" data-edge-key="5" data-edge-id="qa-sqlite" data-composition-points="995,234;995,700;140,700;140,684" d="M 995 234 L 995 692 Q 995 700 987 700 L 148 700 Q 140 700 140 692 L 140 684" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="documents" data-edge-to="sqlite" data-edge-label="文档 / 分段 / 动态知识页入库" data-edge-key="6" data-edge-id="documents-sqlite" data-composition-points="135,484;135,508;156,508;156,576;140,576;140,600" d="M 135 484 L 135 500 Q 135 508 143 508 L 148 508 Q 156 508 156 516 L 156 568 Q 156 576 148 576 L 148 576 Q 140 576 140 584 L 140 600" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="wiki" data-edge-to="content" data-edge-label="读 raw · 写 wiki 产物" data-edge-key="7" data-edge-id="wiki-content" data-composition-points="425,484;425,600" d="M 425 484 L 425 600" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="graph" data-edge-to="content" data-edge-label="读 manifest / 内链" data-edge-key="8" data-edge-id="graph-content" data-composition-points="620,442;560,442;560,642;525,642" d="M 620 442 L 568 442 Q 560 442 560 450 L 560 634 Q 560 642 552 642 L 525 642" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="graph" data-edge-to="output" data-edge-label="写 kg_nodes / kg_edges" data-edge-key="9" data-edge-id="graph-output" data-composition-points="715,484;715,600" d="M 715 484 L 715 600" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="eval" data-edge-to="qa" data-edge-label="16 题评估" data-edge-key="10" data-edge-id="eval-qa" data-composition-points="1150,442;1140,442;1140,192;1090,192" d="M 1150 442 L 1145 442 Q 1140 442 1140 437 L 1140 200 Q 1140 192 1132 192 L 1090 192" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+
+        <!-- Components -->
+        <g id="node-contracts" data-node-id="contracts" data-node-label="@llmwiki/contracts" tabindex="0" role="button" aria-label="Focus @llmwiki/contracts, 共享类型 + 演示数据, packages/contracts" aria-pressed="false" data-node-kind="backend" data-node-sublabel="共享类型 + 演示数据" data-node-context="packages/contracts">
+          <title>@llmwiki/contracts · 共享类型 + 演示数据 · packages/contracts</title>
+          <rect x="40" y="40" width="190" height="64" rx="6" class="c-mask"/>
+          <rect x="40" y="40" width="190" height="64" rx="6" class="c-backend" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(46 46) scale(0.6875)">
+            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
+          </g>
+          <text data-detail-anchor x="135" y="70" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">@llmwiki/contracts</text>
+        <text data-detail="context" x="135" y="86" class="t-muted" font-size="9" text-anchor="middle">共享类型 + 演示数据</text>
+        </g>
+
+        <g id="node-web" data-node-id="web" data-node-label="Web 知识工作台" tabindex="0" role="button" aria-label="Focus Web 知识工作台, Next.js 16 · React 19, apps/web · Next.js 16" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="Next.js 16 · React 19" data-node-context="apps/web · Next.js 16">
+          <title>Web 知识工作台 · Next.js 16 · React 19 · apps/web · Next.js 16</title>
+          <rect x="40" y="160" width="190" height="84" rx="6" class="c-mask"/>
+          <rect x="40" y="160" width="190" height="84" rx="6" class="c-frontend" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(46 166) scale(0.6875)">
+            <rect x="2" y="3" width="12" height="10" rx="2"/>
+            <path d="M2 6.5h12"/>
+            <circle cx="4.1" cy="4.8" r=".7" class="sigil-fill"/>
+            <circle cx="6.3" cy="4.8" r=".7" class="sigil-fill"/>
+          </g>
+          <text data-detail-anchor x="135" y="200" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Web 知识工作台</text>
+        <text data-detail="context" x="135" y="216" class="t-muted" font-size="9" text-anchor="middle">Next.js 16 · React 19</text>
+        </g>
+
+        <g id="node-api" data-node-id="api" data-node-label="Fastify API 服务" tabindex="0" role="button" aria-label="Focus Fastify API 服务, Fastify 5 · 7 组 REST 路由, apps/api · Fastify 服务端" aria-pressed="false" data-node-kind="backend" data-node-sublabel="Fastify 5 · 7 组 REST 路由" data-node-tag="REST + SSE + CORS · :4000" data-node-context="apps/api · Fastify 服务端">
+          <title>Fastify API 服务 · Fastify 5 · 7 组 REST 路由 · apps/api · Fastify 服务端 · REST + SSE + CORS · :4000</title>
+          <rect x="330" y="150" width="210" height="100" rx="6" class="c-mask"/>
+          <rect x="330" y="150" width="210" height="100" rx="6" class="c-backend" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(336 156) scale(0.6875)">
+            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
+          </g>
+          <text data-detail-anchor x="435" y="198" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Fastify API 服务</text>
+        <text data-detail="context" x="435" y="214" class="t-muted" font-size="9" text-anchor="middle">Fastify 5 · 7 组 REST 路由</text>
+        <text data-detail="fine" x="435" y="242" class="t-backend" font-size="7" text-anchor="middle">REST + SSE + CORS · :4000</text>
+        </g>
+
+        <g id="node-qa" data-node-id="qa" data-node-label="可溯源问答服务" tabindex="0" role="button" aria-label="Focus 可溯源问答服务, 证据检索 + 受约束生成, apps/api · Fastify 服务端" aria-pressed="false" data-node-kind="backend" data-node-sublabel="证据检索 + 受约束生成" data-node-tag="SSE 流式" data-node-context="apps/api · Fastify 服务端">
+          <title>可溯源问答服务 · 证据检索 + 受约束生成 · apps/api · Fastify 服务端 · SSE 流式</title>
+          <rect x="900" y="150" width="190" height="84" rx="6" class="c-mask"/>
+          <rect x="900" y="150" width="190" height="84" rx="6" class="c-backend" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(906 156) scale(0.6875)">
+            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
+          </g>
+          <text data-detail-anchor x="995" y="190" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">可溯源问答服务</text>
+        <text data-detail="context" x="995" y="206" class="t-muted" font-size="9" text-anchor="middle">证据检索 + 受约束生成</text>
+        <text data-detail="fine" x="995" y="226" class="t-backend" font-size="7" text-anchor="middle">SSE 流式</text>
+        </g>
+
+        <g id="node-deepseek" data-node-id="deepseek" data-node-label="DeepSeek API" tabindex="0" role="button" aria-label="Focus DeepSeek API, api.deepseek.com, Architecture component" aria-pressed="false" data-node-kind="external" data-node-sublabel="api.deepseek.com" data-node-context="Architecture component">
+          <title>DeepSeek API · api.deepseek.com · Architecture component</title>
+          <rect x="1360" y="160" width="190" height="84" rx="6" class="c-mask"/>
+          <rect x="1360" y="160" width="190" height="84" rx="6" class="c-external" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="external" class="semantic-sigil s-external" transform="translate(1366 166) scale(0.6875)">
+            <rect x="2.5" y="5" width="8.5" height="8" rx="1.5"/>
+            <path d="M8 2.5h5.5V8M13.5 2.5 7.5 8.5"/>
+          </g>
+          <text data-detail-anchor x="1455" y="200" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">DeepSeek API</text>
+        <text data-detail="context" x="1455" y="216" class="t-muted" font-size="9" text-anchor="middle">api.deepseek.com</text>
+        </g>
+
+        <g id="node-documents" data-node-id="documents" data-node-label="文档处理管道" tabindex="0" role="button" aria-label="Focus 文档处理管道, 上传 → 解析 → 分段 → 入库, apps/api · 业务服务层" aria-pressed="false" data-node-kind="backend" data-node-sublabel="上传 → 解析 → 分段 → 入库" data-node-context="apps/api · 业务服务层">
+          <title>文档处理管道 · 上传 → 解析 → 分段 → 入库 · apps/api · 业务服务层</title>
+          <rect x="40" y="400" width="190" height="84" rx="6" class="c-mask"/>
+          <rect x="40" y="400" width="190" height="84" rx="6" class="c-backend" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(46 406) scale(0.6875)">
+            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
+          </g>
+          <text data-detail-anchor x="135" y="440" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">文档处理管道</text>
+        <text data-detail="context" x="135" y="456" class="t-muted" font-size="9" text-anchor="middle">上传 → 解析 → 分段 → 入库</text>
+        </g>
+
+        <g id="node-wiki" data-node-id="wiki" data-node-label="Wiki 确定性编译器" tabindex="0" role="button" aria-label="Focus Wiki 确定性编译器, 18 raw → 47 页 + manifest, apps/api · 业务服务层" aria-pressed="false" data-node-kind="backend" data-node-sublabel="18 raw → 47 页 + manifest" data-node-context="apps/api · 业务服务层">
+          <title>Wiki 确定性编译器 · 18 raw → 47 页 + manifest · apps/api · 业务服务层</title>
+          <rect x="330" y="400" width="190" height="84" rx="6" class="c-mask"/>
+          <rect x="330" y="400" width="190" height="84" rx="6" class="c-backend" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(336 406) scale(0.6875)">
+            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
+          </g>
+          <text data-detail-anchor x="425" y="440" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Wiki 确定性编译器</text>
+        <text data-detail="context" x="425" y="456" class="t-muted" font-size="9" text-anchor="middle">18 raw → 47 页 + manifest</text>
+        </g>
+
+        <g id="node-graph" data-node-id="graph" data-node-label="图谱规则抽取器" tabindex="0" role="button" aria-label="Focus 图谱规则抽取器, 75 节点 / 291 边, apps/api · 业务服务层" aria-pressed="false" data-node-kind="backend" data-node-sublabel="75 节点 / 291 边" data-node-context="apps/api · 业务服务层">
+          <title>图谱规则抽取器 · 75 节点 / 291 边 · apps/api · 业务服务层</title>
+          <rect x="620" y="400" width="190" height="84" rx="6" class="c-mask"/>
+          <rect x="620" y="400" width="190" height="84" rx="6" class="c-backend" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(626 406) scale(0.6875)">
+            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
+          </g>
+          <text data-detail-anchor x="715" y="440" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">图谱规则抽取器</text>
+        <text data-detail="context" x="715" y="456" class="t-muted" font-size="9" text-anchor="middle">75 节点 / 291 边</text>
+        </g>
+
+        <g id="node-eval" data-node-id="eval" data-node-label="可复现评估运行器" tabindex="0" role="button" aria-label="Focus 可复现评估运行器, 16 题 · 7 维 · 93.4, apps/api · 业务服务层" aria-pressed="false" data-node-kind="backend" data-node-sublabel="16 题 · 7 维 · 93.4" data-node-context="apps/api · 业务服务层">
+          <title>可复现评估运行器 · 16 题 · 7 维 · 93.4 · apps/api · 业务服务层</title>
+          <rect x="1150" y="400" width="190" height="84" rx="6" class="c-mask"/>
+          <rect x="1150" y="400" width="190" height="84" rx="6" class="c-backend" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(1156 406) scale(0.6875)">
+            <path d="M6 3 3 8l3 5M10 3l3 5-3 5"/>
+          </g>
+          <text data-detail-anchor x="1245" y="440" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">可复现评估运行器</text>
+        <text data-detail="context" x="1245" y="456" class="t-muted" font-size="9" text-anchor="middle">16 题 · 7 维 · 93.4</text>
+        </g>
+
+        <g id="node-sqlite" data-node-id="sqlite" data-node-label="SQLite 知识库" tabindex="0" role="button" aria-label="Focus SQLite 知识库, better-sqlite3 · llmwiki.db, 存储与产物层" aria-pressed="false" data-node-kind="database" data-node-sublabel="better-sqlite3 · llmwiki.db" data-node-context="存储与产物层">
+          <title>SQLite 知识库 · better-sqlite3 · llmwiki.db · 存储与产物层</title>
+          <rect x="40" y="600" width="200" height="84" rx="6" class="c-mask"/>
+          <rect x="40" y="600" width="200" height="84" rx="6" class="c-database" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="database" class="semantic-sigil s-database" transform="translate(46 606) scale(0.6875)">
+            <ellipse cx="8" cy="4" rx="5" ry="2"/>
+            <path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4M3 8c0 1.1 2.2 2 5 2s5-.9 5-2"/>
+          </g>
+          <text data-detail-anchor x="140" y="640" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">SQLite 知识库</text>
+        <text data-detail="context" x="140" y="656" class="t-muted" font-size="9" text-anchor="middle">better-sqlite3 · llmwiki.db</text>
+        </g>
+
+        <g id="node-content" data-node-id="content" data-node-label="content/ 内容层" tabindex="0" role="button" aria-label="Focus content/ 内容层, raw 源 → wiki 产物 + manifest.json, 存储与产物层" aria-pressed="false" data-node-kind="cloud" data-node-sublabel="raw 源 → wiki 产物 + manifest.json" data-node-context="存储与产物层">
+          <title>content/ 内容层 · raw 源 → wiki 产物 + manifest.json · 存储与产物层</title>
+          <rect x="325" y="600" width="200" height="84" rx="6" class="c-mask"/>
+          <rect x="325" y="600" width="200" height="84" rx="6" class="c-cloud" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="cloud" class="semantic-sigil s-cloud" transform="translate(331 606) scale(0.6875)">
+            <path d="M4.3 12.5h7.3a2.4 2.4 0 0 0 .2-4.8 4 4 0 0 0-7.5-1.3A3.1 3.1 0 0 0 4.3 12.5Z"/>
+          </g>
+          <text data-detail-anchor x="425" y="640" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">content/ 内容层</text>
+        <text data-detail="context" x="425" y="656" class="t-muted" font-size="9" text-anchor="middle">raw 源 → wiki 产物 + manifest.json</text>
+        </g>
+
+        <g id="node-output" data-node-id="output" data-node-label="output/ 产物层" tabindex="0" role="button" aria-label="Focus output/ 产物层, kg_*.json · eval/*.json, 存储与产物层" aria-pressed="false" data-node-kind="cloud" data-node-sublabel="kg_*.json · eval/*.json" data-node-context="存储与产物层">
+          <title>output/ 产物层 · kg_*.json · eval/*.json · 存储与产物层</title>
+          <rect x="615" y="600" width="200" height="84" rx="6" class="c-mask"/>
+          <rect x="615" y="600" width="200" height="84" rx="6" class="c-cloud" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="cloud" class="semantic-sigil s-cloud" transform="translate(621 606) scale(0.6875)">
+            <path d="M4.3 12.5h7.3a2.4 2.4 0 0 0 .2-4.8 4 4 0 0 0-7.5-1.3A3.1 3.1 0 0 0 4.3 12.5Z"/>
+          </g>
+          <text data-detail-anchor x="715" y="640" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">output/ 产物层</text>
+        <text data-detail="context" x="715" y="656" class="t-muted" font-size="9" text-anchor="middle">kg_*.json · eval/*.json</text>
+        </g>
+
+        <!-- Connection labels -->
+        <g data-detail="context" data-edge-from="web" data-edge-to="api" data-edge-label="REST · SSE" data-edge-key="0" data-edge-id="web-api">
+          <rect x="251" y="186" width="58" height="14" rx="3" class="c-mask"/>
+          <text x="280" y="196" class="t-backend" font-size="8" text-anchor="middle">REST · SSE</text>
+        </g>
+        <g data-detail="context" data-edge-from="contracts" data-edge-to="web" data-edge-label="类型 + 演示数据兜底" data-edge-key="1" data-edge-id="contracts-web">
+          <rect x="149.4" y="122" width="101.2" height="14" rx="3" class="c-mask"/>
+          <text x="200" y="132" class="t-messagebus" font-size="8" text-anchor="middle">类型 + 演示数据兜底</text>
+        </g>
+        <g data-detail="context" data-edge-from="contracts" data-edge-to="api" data-edge-label="共享类型契约" data-edge-key="2" data-edge-id="contracts-api">
+          <rect x="306.2" y="91" width="67.6" height="14" rx="3" class="c-mask"/>
+          <text x="340" y="101" class="t-messagebus" font-size="8" text-anchor="middle">共享类型契约</text>
+        </g>
+        <g data-detail="context" data-edge-from="api" data-edge-to="qa" data-edge-label="问答路由" data-edge-key="3" data-edge-id="api-qa">
+          <rect x="695.8" y="146" width="48.4" height="14" rx="3" class="c-mask"/>
+          <text x="720" y="156" class="t-backend" font-size="8" text-anchor="middle">问答路由</text>
+        </g>
+        <g data-detail="context" data-edge-from="qa" data-edge-to="deepseek" data-edge-label="chat/completions 受约束生成" data-edge-key="4" data-edge-id="qa-deepseek">
+          <rect x="1160.2" y="178" width="139.6" height="14" rx="3" class="c-mask"/>
+          <text x="1230" y="188" class="t-backend" font-size="8" text-anchor="middle">chat/completions 受约束生成</text>
+        </g>
+        <g data-detail="context" data-edge-from="qa" data-edge-to="sqlite" data-edge-label="486 证据片段检索" data-edge-key="5" data-edge-id="qa-sqlite">
+          <rect x="521.6" y="686" width="86.8" height="14" rx="3" class="c-mask"/>
+          <text x="565" y="696" class="t-muted" font-size="8" text-anchor="middle">486 证据片段检索</text>
+        </g>
+        <g data-detail="context" data-edge-from="documents" data-edge-to="sqlite" data-edge-label="文档 / 分段 / 动态知识页入库" data-edge-key="6" data-edge-id="documents-sqlite">
+          <rect x="142.8" y="532" width="144.4" height="14" rx="3" class="c-mask"/>
+          <text x="215" y="542" class="t-muted" font-size="8" text-anchor="middle">文档 / 分段 / 动态知识页入库</text>
+        </g>
+        <g data-detail="context" data-edge-from="wiki" data-edge-to="content" data-edge-label="读 raw · 写 wiki 产物" data-edge-key="7" data-edge-id="wiki-content">
+          <rect x="444.6" y="532" width="110.8" height="14" rx="3" class="c-mask"/>
+          <text x="500" y="542" class="t-muted" font-size="8" text-anchor="middle">读 raw · 写 wiki 产物</text>
+        </g>
+        <g data-detail="context" data-edge-from="graph" data-edge-to="content" data-edge-label="读 manifest / 内链" data-edge-key="8" data-edge-id="graph-content">
+          <rect x="446.8" y="556" width="96.39999999999999" height="14" rx="3" class="c-mask"/>
+          <text x="495" y="566" class="t-muted" font-size="8" text-anchor="middle">读 manifest / 内链</text>
+        </g>
+        <g data-detail="context" data-edge-from="graph" data-edge-to="output" data-edge-label="写 kg_nodes / kg_edges" data-edge-key="9" data-edge-id="graph-output">
+          <rect x="732.2" y="532" width="115.6" height="14" rx="3" class="c-mask"/>
+          <text x="790" y="542" class="t-muted" font-size="8" text-anchor="middle">写 kg_nodes / kg_edges</text>
+        </g>
+        <g data-detail="context" data-edge-from="eval" data-edge-to="qa" data-edge-label="16 题评估" data-edge-key="10" data-edge-id="eval-qa">
+          <rect x="1113.4" y="320" width="53.199999999999996" height="14" rx="3" class="c-mask"/>
+          <text x="1140" y="330" class="t-muted" font-size="8" text-anchor="middle">16 题评估</text>
+        </g>
+
+        <!-- Legend -->
+        <g data-legend data-legend-bridge>
+          <text x="40" y="794" class="t-primary" font-size="12" font-weight="650">Legend</text>
+          <g data-legend-semantic-kind="frontend" data-legend-kind="frontend" data-legend-label="Frontend" data-legend-x="40" data-legend-baseline="814" data-legend-width="83">
+            <rect x="40" y="805" width="16" height="10" rx="2.5" class="c-frontend" stroke-width="1"/>
+            <text x="62" y="814" class="t-muted" font-size="10" font-weight="500">Frontend</text>
+          </g>
+          <g data-legend-semantic-kind="backend" data-legend-kind="backend" data-legend-label="Backend" data-legend-x="145" data-legend-baseline="814" data-legend-width="78">
+            <rect x="145" y="805" width="16" height="10" rx="2.5" class="c-backend" stroke-width="1"/>
+            <text x="167" y="814" class="t-muted" font-size="10" font-weight="500">Backend</text>
+          </g>
+          <g data-legend-semantic-kind="database" data-legend-kind="database" data-legend-label="Database" data-legend-x="245" data-legend-baseline="814" data-legend-width="83">
+            <rect x="245" y="805" width="16" height="10" rx="2.5" class="c-database" stroke-width="1"/>
+            <text x="267" y="814" class="t-muted" font-size="10" font-weight="500">Database</text>
+          </g>
+          <g data-legend-semantic-kind="cloud" data-legend-kind="cloud" data-legend-label="Cloud" data-legend-x="350" data-legend-baseline="814" data-legend-width="68">
+            <rect x="350" y="805" width="16" height="10" rx="2.5" class="c-cloud" stroke-width="1"/>
+            <text x="372" y="814" class="t-muted" font-size="10" font-weight="500">Cloud</text>
+          </g>
+          <g data-legend-semantic-kind="external" data-legend-kind="external" data-legend-label="External" data-legend-x="440" data-legend-baseline="814" data-legend-width="83">
+            <rect x="440" y="805" width="16" height="10" rx="2.5" class="c-external" stroke-width="1"/>
+            <text x="462" y="814" class="t-muted" font-size="10" font-weight="500">External</text>
+          </g>
+        </g>
+      </svg>
+      <p class="intent-trace-status no-print" id="intent-trace-status" role="status" aria-live="polite" aria-atomic="true"></p>
+      <div class="share-chapter-cue no-print" id="share-chapter-cue" hidden role="status" aria-live="polite">
+        <div class="share-chapter-index">
+          <span class="share-chapter-state" id="share-chapter-state">Ready</span>
+          <span class="share-chapter-count" id="share-chapter-count">Chapter 01 / 01</span>
+        </div>
+        <div class="share-chapter-copy">
+          <strong id="share-chapter-label">Guided chapter</strong>
+          <small id="share-chapter-note"></small>
+        </div>
+        <span class="share-chapter-route" id="share-chapter-route"></span>
+        <span class="share-chapter-progress" aria-hidden="true"><span id="share-chapter-progress-bar"></span></span>
+      </div>
+      <div class="diagram-guide no-print" id="diagram-guide" hidden role="dialog" aria-modal="false" aria-labelledby="diagram-guide-title">
+        <div class="diagram-guide-head">
+          <span>
+            <span class="diagram-guide-eyebrow">Diagram guide</span>
+            <strong class="diagram-guide-title" id="diagram-guide-title">Explore this system</strong>
+          </span>
+          <button class="diagram-guide-close" id="diagram-guide-close" type="button" aria-label="Close diagram guide">&#215;</button>
+        </div>
+        <p class="diagram-guide-stats" id="diagram-guide-stats">Inspecting compiled semantics</p>
+        <div class="diagram-guide-actions" id="diagram-guide-actions" role="group" aria-label="Diagram exploration actions">
+          <button class="diagram-guide-action" type="button" data-guide-action="find" aria-label="Find any node">
+            <span class="diagram-guide-index" aria-hidden="true">01</span>
+            <span class="diagram-guide-action-copy"><strong>Find any node</strong><small>Search labels, responsibilities, kinds, and stable IDs.</small></span>
+            <kbd aria-hidden="true">/</kbd>
+          </button>
+          <button class="diagram-guide-action" type="button" data-guide-action="route" aria-label="Trace a directed route">
+            <span class="diagram-guide-index" aria-hidden="true">02</span>
+            <span class="diagram-guide-action-copy"><strong>Trace a route</strong><small>Ask how two semantic nodes connect in authored direction.</small></span>
+            <kbd aria-hidden="true">R</kbd>
+          </button>
+          <button class="diagram-guide-action" type="button" data-guide-action="map" aria-label="See the whole system">
+            <span class="diagram-guide-index" aria-hidden="true">03</span>
+            <span class="diagram-guide-action-copy"><strong>See the whole system</strong><small>Open Semantic Radar with a live viewport and stable nodes.</small></span>
+            <kbd aria-hidden="true">M</kbd>
+          </button>
+          <button class="diagram-guide-action" type="button" data-guide-action="lens" aria-label="Compare semantic kinds">
+            <span class="diagram-guide-index" aria-hidden="true">04</span>
+            <span class="diagram-guide-action-copy"><strong>Compare semantic kinds</strong><small>Count roles, reveal their traffic, and compare direct authored links.</small></span>
+            <kbd aria-hidden="true">L</kbd>
+          </button>
+          <button class="diagram-guide-action" type="button" data-guide-action="story" aria-label="Play the guided story">
+            <span class="diagram-guide-index" aria-hidden="true">05</span>
+            <span class="diagram-guide-action-copy"><strong>Play the guided story</strong><small id="diagram-guide-story-copy">Walk the authored chapters and real relationships.</small></span>
+            <kbd aria-hidden="true">P</kbd>
+          </button>
+          <button class="diagram-guide-action" type="button" data-guide-action="present" aria-label="Enter presentation stage">
+            <span class="diagram-guide-index" aria-hidden="true">06</span>
+            <span class="diagram-guide-action-copy"><strong>Enter Presentation Stage</strong><small>Give the live diagram the viewport without changing export.</small></span>
+            <kbd aria-hidden="true">F</kbd>
+          </button>
+        </div>
+        <div class="diagram-guide-shortcuts" aria-label="Additional keyboard shortcuts">
+          <span><kbd>E</kbd> Export</span><span><kbd>T</kbd> Theme</span><span><kbd>S</kbd> Style</span><span><kbd>0</kbd> Reset</span><span><kbd>+</kbd> Zoom in</span><span><kbd>-</kbd> Zoom out</span><span><kbd>Esc</kbd> Close</span>
+        </div>
+        <p class="diagram-guide-feedback" id="diagram-guide-feedback" aria-live="polite"></p>
+      </div>
+      <div class="node-finder no-print" id="node-finder" hidden role="dialog" aria-modal="false" aria-labelledby="node-finder-title">
+        <div class="node-finder-head">
+          <strong id="node-finder-title">Find a node</strong>
+          <button class="node-finder-close" id="node-finder-close" type="button" aria-label="Close node finder">&#215;</button>
+        </div>
+        <div class="node-finder-search">
+          <span aria-hidden="true">&#8981;</span>
+          <input class="node-finder-input" id="node-finder-input" type="search" autocomplete="off" spellcheck="false" placeholder="Search labels or IDs" aria-label="Search diagram nodes" aria-describedby="node-finder-status">
+          <kbd aria-hidden="true">/</kbd>
+        </div>
+        <div class="node-finder-results" id="node-finder-results" role="group" aria-label="Diagram nodes"></div>
+        <p class="node-finder-empty" id="node-finder-empty" hidden>No matching nodes</p>
+        <p class="node-finder-status" id="node-finder-status" aria-live="polite"></p>
+      </div>
+      <div class="focus-chip relationship-lens no-print" id="focus-chip" hidden role="region" aria-labelledby="relationship-lens-title">
+        <div class="relationship-lens-head">
+          <div class="relationship-lens-copy">
+            <span class="relationship-lens-eyebrow">Semantic passport</span>
+            <strong class="relationship-lens-title" id="relationship-lens-title"><span id="focus-label"></span></strong>
+            <span class="semantic-passport-detail" id="focus-detail" hidden></span>
+            <div class="semantic-passport-meta" id="focus-passport-meta" aria-label="Node metadata">
+              <span id="focus-kind" data-passport="kind"></span>
+              <span id="focus-context" data-passport="context" hidden></span>
+              <span id="focus-tag" data-passport="tag" hidden></span>
+              <code id="focus-id" data-passport="id"></code>
+            </div>
+            <div class="semantic-passport-evidence" id="focus-evidence" hidden aria-label="Verified source evidence">
+              <div class="semantic-passport-evidence-head">
+                <span class="semantic-passport-evidence-status">Verified source</span>
+                <a class="semantic-passport-repository" id="focus-repository" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer"></a>
+              </div>
+              <div class="semantic-passport-evidence-links" id="focus-evidence-links"></div>
+            </div>
+            <span class="relationship-lens-summary" id="focus-summary" aria-live="polite"></span>
+            <div class="semantic-passport-reach" id="focus-reach" hidden>
+              <span class="semantic-passport-reach-label">Authored reach</span>
+              <div class="semantic-passport-reach-actions" role="group" aria-label="Trace authored reachability">
+                <button id="btn-reach-upstream" type="button" aria-label="Trace upstream authored reachability" aria-pressed="false">
+                  <span>Upstream</span><strong id="focus-reach-upstream-count">0</strong>
+                </button>
+                <button id="btn-reach-downstream" type="button" aria-label="Trace downstream authored reachability" aria-pressed="false">
+                  <span>Downstream</span><strong id="focus-reach-downstream-count">0</strong>
+                </button>
+              </div>
+              <small class="semantic-passport-reach-status" id="focus-reach-status" hidden aria-live="polite"></small>
+            </div>
+          </div>
+          <div class="relationship-lens-actions">
+            <button id="btn-focus-clear" type="button" aria-label="Close semantic passport" title="Close">&#215;</button>
+            <button id="btn-focus-copy" type="button" aria-label="Copy link to focused node">Copy link</button>
+            <button id="btn-focus-relations" type="button" aria-label="Show connected relationships" aria-expanded="false" aria-controls="relationship-lens-list">Relations</button>
+          </div>
+        </div>
+        <div class="relationship-lens-list" id="relationship-lens-list" aria-label="Connected relationships"></div>
+      </div>
+      <div class="route-probe no-print" id="route-probe" hidden role="region" aria-labelledby="route-probe-title" data-state="idle">
+        <div class="route-probe-head">
+          <span class="route-probe-copy">
+            <span class="route-probe-eyebrow">Route probe</span>
+            <strong class="route-probe-title" id="route-probe-title">Choose a start node</strong>
+          </span>
+          <span class="route-probe-actions">
+            <button class="route-probe-find" id="route-probe-find" type="button" aria-label="Find a route start" data-node-finder-trigger>Find start</button>
+            <button class="route-probe-copy-link" id="route-probe-copy" type="button" aria-label="Copy link to traced route" hidden>Copy link</button>
+            <button id="route-probe-clear" type="button" aria-label="Clear route probe">Clear</button>
+          </span>
+        </div>
+        <div class="route-probe-path" id="route-probe-path" aria-label="Traced route">
+          <span class="route-probe-placeholder">Pick two semantic nodes on the diagram</span>
+        </div>
+        <div class="route-journey-controls" id="route-journey-controls" hidden role="group" aria-label="Route journey controls" data-playing="false">
+          <button id="route-journey-prev" type="button" aria-label="Previous route position" title="Previous route position">&#8592;</button>
+          <button class="route-journey-play" id="route-journey-play" type="button" aria-label="Play route journey" aria-pressed="false" title="Play route journey">
+            <span id="route-journey-play-icon" aria-hidden="true">&#9654;</span>
+            <span id="route-journey-play-label">Journey</span>
+          </button>
+          <button id="route-journey-next" type="button" aria-label="Next route position" title="Next route position">&#8594;</button>
+          <button class="route-journey-overview" id="route-journey-overview" type="button" aria-label="Show complete route overview" title="Show complete route overview">Overview</button>
+        </div>
+        <small class="route-probe-status" id="route-probe-status" aria-live="polite">Choose the source, then the destination. Direction matters.</small>
+      </div>
+      <div class="semantic-lens no-print" id="semantic-lens" hidden role="dialog" aria-modal="false" aria-labelledby="semantic-lens-title">
+        <div class="semantic-lens-head">
+          <span>
+            <span class="semantic-lens-eyebrow">Semantic lens</span>
+            <strong class="semantic-lens-title" id="semantic-lens-title">Compare system roles</strong>
+          </span>
+          <button class="semantic-lens-close" id="semantic-lens-close" type="button" aria-label="Close semantic lens">&#215;</button>
+        </div>
+        <p class="semantic-lens-instruction">Choose up to two semantic kinds. One reveals its real traffic; two compare only direct authored relationships.</p>
+        <div class="semantic-lens-kinds" id="semantic-lens-kinds" role="group" aria-label="Semantic kinds"></div>
+        <p class="semantic-lens-status" id="semantic-lens-status" aria-live="polite">Choose a kind to inspect its nodes and touching relationships.</p>
+        <div class="semantic-lens-actions">
+          <button id="semantic-lens-copy" type="button" aria-label="Copy link to semantic lens" hidden>Copy link</button>
+          <button id="semantic-lens-clear" type="button" aria-label="Clear semantic lens">Clear</button>
+        </div>
+      </div>
+      <div class="overview-map no-print" id="overview-map" hidden role="region" aria-labelledby="overview-map-title">
+        <div class="overview-map-head">
+          <span class="overview-map-live" aria-hidden="true"></span>
+          <span class="overview-map-copy">
+            <strong id="overview-map-title">Semantic radar</strong>
+            <small id="overview-map-status" aria-live="polite">Building overview</small>
+          </span>
+          <button class="overview-map-close" id="overview-map-close" type="button" aria-label="Close semantic radar">&#215;</button>
+        </div>
+        <div class="overview-map-surface" id="overview-map-surface" tabindex="0" role="group" aria-label="Diagram overview. Click a node to focus it, or use arrow keys to pan."></div>
+        <div class="overview-map-hint" aria-hidden="true"><span>Click node</span><span>Drag to pan</span></div>
+      </div>
+      <div class="diagram-nav no-print" role="toolbar" aria-label="Diagram view controls">
+        <button id="btn-route-probe" type="button" aria-label="Trace a directed route" aria-pressed="false" aria-controls="route-probe" title="Trace route (R)">PATH</button>
+        <button id="btn-overview-map" type="button" aria-label="Open semantic radar" aria-expanded="false" aria-controls="overview-map" title="Semantic radar (M)">MAP</button>
+        <button id="btn-semantic-lens" type="button" aria-label="Open semantic lens" aria-haspopup="dialog" aria-expanded="false" aria-pressed="false" aria-controls="semantic-lens" title="Semantic lens (L)">LENS</button>
+        <button id="btn-node-finder" type="button" aria-label="Find a node" aria-haspopup="dialog" aria-expanded="false" aria-controls="node-finder" title="Find a node (/)" data-node-finder-trigger><span class="diagram-nav-icon find" aria-hidden="true"></span></button>
+        <button id="btn-diagram-guide" type="button" aria-label="Open diagram guide" aria-haspopup="dialog" aria-expanded="false" aria-controls="diagram-guide" title="Diagram guide (?)"><span class="diagram-nav-icon guide" aria-hidden="true"></span></button>
+        <button data-view="out" type="button" aria-label="Zoom out" title="Zoom out (-)"><span class="diagram-nav-icon minus" aria-hidden="true"></span></button>
+        <button data-view="reset" type="button" aria-label="Reset diagram view" title="Reset view (0)"><span class="diagram-nav-detail" data-view-detail hidden>READ</span><span class="diagram-nav-percent" data-view-percent>100%</span></button>
+        <button data-view="in" type="button" aria-label="Zoom in" title="Zoom in (+)"><span class="diagram-nav-icon plus" aria-hidden="true"></span></button>
+      </div>
+    </div>
+
+    <!-- Info Cards -->
+    <div class="cards">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot cyan"></div>
+          <h3>编译式 Wiki</h3>
+        </div>
+        <ul>
+          <li>&bull; content/raw 18 份源只读不可变</li>
+          <li>&bull; 确定性编译器 → 47 知识页 + manifest.json</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot emerald"></div>
+          <h3>知识图谱</h3>
+        </div>
+        <ul>
+          <li>&bull; 本地规则抽取 75 节点 / 291 边（无模型）</li>
+          <li>&bull; G6 聚类图 + 结构视图双视图</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot violet"></div>
+          <h3>可溯源问答与评估</h3>
+        </div>
+        <ul>
+          <li>&bull; SQLite 486 证据片段加权检索</li>
+          <li>&bull; DeepSeek 受约束生成 + SSE 流式 + 引用联动</li>
+          <li>&bull; 未配置 / 失败时透明降级为本地结果</li>
+          <li>&bull; 16 题 7 维评估 · 总分 93.4 · 检索命中 38% → 62%</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    var Archify = {};
+
+    function hasDrawableGeometry(element) {
+      if (!element) return false;
+      var geometries = /^(path|line|polyline)$/i.test(element.tagName)
+        ? [element]
+        : Array.prototype.slice.call(element.querySelectorAll('path, line, polyline'));
+      return geometries.some(function (geometry) {
+        var source = geometry.tagName.toLowerCase() === 'path'
+          ? geometry.getAttribute('d')
+          : geometry.tagName.toLowerCase() === 'polyline'
+            ? geometry.getAttribute('points')
+            : [geometry.getAttribute('x1'), geometry.getAttribute('y1'), geometry.getAttribute('x2'), geometry.getAttribute('y2')].join(' ');
+        if (!source || /(?:^|[^a-z])(?:nan|infinity)(?:[^a-z]|$)/i.test(source) || typeof geometry.getTotalLength !== 'function') return false;
+        try {
+          var length = Number(geometry.getTotalLength());
+          return Number.isFinite(length) && length > 0;
+        } catch (_) {
+          return false;
+        }
+      });
+    }
+
+    /* ============================================================
+       Visual style try-on — one topology, four bundled presets.
+       The reader's choice is intentionally session-only: it updates the
+       live page and canonical SVG together, but never rewrites the source,
+       URL, or a later diagram's authored default.
+       ============================================================ */
+    Archify.preset = (function () {
+      var PRESETS = ['classic', 'signal-flow', 'blueprint', 'editorial'];
+      var LABELS = { classic: 'Classic', 'signal-flow': 'Flow', blueprint: 'Blueprint', editorial: 'Editorial' };
+      var html = document.documentElement;
+      var svg = document.querySelector('.diagram-container svg');
+      var btn = document.getElementById('btn-preset');
+      var label = document.getElementById('preset-label');
+      var menu = document.getElementById('preset-menu');
+      var options = function () {
+        return Array.prototype.slice.call(menu.querySelectorAll('[data-preset-value]'));
+      };
+      var authored = PRESETS.indexOf(html.getAttribute('data-preset')) >= 0
+        ? html.getAttribute('data-preset')
+        : 'classic';
+
+      function current() {
+        var value = html.getAttribute('data-preset');
+        return PRESETS.indexOf(value) >= 0 ? value : authored;
+      }
+      function nextAfter(preset) {
+        return PRESETS[(PRESETS.indexOf(preset) + 1) % PRESETS.length];
+      }
+      function apply(preset) {
+        if (html.getAttribute('data-embed') === 'true') return false;
+        if (PRESETS.indexOf(preset) < 0) return false;
+        html.setAttribute('data-preset', preset);
+        svg.setAttribute('data-preset', preset);
+        btn.setAttribute('data-preset-option', preset);
+        label.textContent = LABELS[preset];
+        btn.setAttribute('aria-label', 'Visual style: ' + LABELS[preset] + '. Choose visual style');
+        btn.title = 'Choose visual style (S cycles)';
+        options().forEach(function (option) {
+          var selected = option.getAttribute('data-preset-value') === preset;
+          option.setAttribute('aria-checked', String(selected));
+        });
+        return true;
+      }
+      function cycle() { return apply(nextAfter(current())); }
+
+      function isOpen() { return menu.classList.contains('open'); }
+      function open(focusLast) {
+        if (html.getAttribute('data-embed') === 'true') return false;
+        if (Archify.exportMenu && Archify.exportMenu.isOpen()) Archify.exportMenu.close(false);
+        menu.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
+        var available = options();
+        var selected = available.find(function (option) { return option.getAttribute('aria-checked') === 'true'; });
+        var target = focusLast ? available[available.length - 1] : (selected || available[0]);
+        if (target) target.focus();
+        return true;
+      }
+      function close(focusTrigger) {
+        menu.classList.remove('open');
+        btn.setAttribute('aria-expanded', 'false');
+        if (focusTrigger) btn.focus();
+        return false;
+      }
+
+      apply(authored);
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (isOpen()) close(false);
+        else open(false);
+      });
+      btn.addEventListener('keydown', function (e) {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          if (!isOpen()) open(e.key === 'ArrowUp');
+        }
+      });
+      document.addEventListener('click', function (e) {
+        if (!menu.contains(e.target) && e.target !== btn) close(false);
+      });
+      menu.addEventListener('click', function (e) {
+        var option = e.target.closest('[data-preset-value]');
+        if (!option || !menu.contains(option)) return;
+        if (apply(option.getAttribute('data-preset-value'))) close(true);
+      });
+      menu.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') { e.preventDefault(); close(true); return; }
+        if (e.key === 'Tab') { close(false); return; }
+        var available = options();
+        var active = available.indexOf(document.activeElement);
+        switch (e.key) {
+          case 'ArrowDown':
+            e.preventDefault();
+            if (available.length) available[(active + 1 + available.length) % available.length].focus();
+            break;
+          case 'ArrowUp':
+            e.preventDefault();
+            if (available.length) available[(active - 1 + available.length) % available.length].focus();
+            break;
+          case 'Home':
+            e.preventDefault();
+            if (available[0]) available[0].focus();
+            break;
+          case 'End':
+            e.preventDefault();
+            if (available.length) available[available.length - 1].focus();
+            break;
+        }
+      });
+      return { cycle: cycle, apply: apply, current: current, authored: authored, open: open, close: close, isOpen: isOpen };
+    })();
+
+    /* ============================================================
+       Theme toggle — persists to localStorage, respects system pref
+       ============================================================ */
+
+    Archify.theme = (function () {
+      var STORAGE_KEY = 'archify-theme';
+      var html = document.documentElement;
+      var btn = document.getElementById('btn-theme');
+      var label = document.getElementById('theme-label');
+
+      // localStorage can throw (blocked cookies, sandboxed iframes); the whole
+      // script element dies on an uncaught error, so guard every access.
+      function readStored() {
+        try { return localStorage.getItem(STORAGE_KEY); } catch (_) { return null; }
+      }
+      function writeStored(value) {
+        try { localStorage.setItem(STORAGE_KEY, value); } catch (_) {}
+      }
+      function urlOverride() {
+        // URL param wins (useful for deterministic screenshots / share links)
+        try {
+          var param = new URLSearchParams(window.location.search).get('theme');
+          if (param === 'light' || param === 'dark') return param;
+        } catch (_) {}
+        return null;
+      }
+
+      function resolveInitial() {
+        var fromUrl = urlOverride();
+        if (fromUrl) return fromUrl;
+        var saved = readStored();
+        if (saved === 'light' || saved === 'dark') return saved;
+        return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      }
+
+      function apply(theme) {
+        html.setAttribute('data-theme', theme);
+        label.textContent = theme === 'dark' ? 'Dark' : 'Light';
+        btn.setAttribute('aria-pressed', theme === 'light' ? 'true' : 'false');
+      }
+
+      function toggle() {
+        var next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        apply(next);
+        writeStored(next);
+      }
+
+      apply(resolveInitial());
+      btn.addEventListener('click', toggle);
+
+      // Follow live OS theme changes while the user has no explicit preference.
+      try {
+        var media = window.matchMedia('(prefers-color-scheme: light)');
+        var onChange = function (e) {
+          var saved = readStored();
+          if (urlOverride() || saved === 'light' || saved === 'dark') return;
+          apply(e.matches ? 'light' : 'dark');
+        };
+        if (media.addEventListener) media.addEventListener('change', onChange);
+        else if (media.addListener) media.addListener(onChange);
+      } catch (_) {}
+
+      return { toggle: toggle };
+    })();
+
+    /* ============================================================
+       Export — Share Card / PNG / JPEG / WebP / SVG / WebM and clipboard
+
+       Raster exports are always rendered at 4x source resolution for
+       maximum sharpness. The trick: we set the serialized SVG's
+       `width`/`height` to viewBox * 4 so the browser rasterizes the
+       vectors at that resolution natively. drawImage then draws at
+       the image's natural size (no upscaling = no blur).
+
+       JPEG/WebP paint the current theme's background explicitly since
+       those formats have no alpha channel.
+       ============================================================ */
+    (function () {
+      var RASTER_SCALE = 4;
+      var MOTION_DURATION = 6000;
+      var MOTION_FPS = 30;
+      var SHARE_CARD_WIDTH = 1200;
+      var SHARE_CARD_HEIGHT = 630;
+      var SHARE_CARD_PADDING = 36;
+      var SHARE_CARD_HEADER = 112;
+
+      function diagramFilename() {
+        var title = (document.title || 'diagram')
+          .replace(/\s+Architecture(\s+Diagram)?$/i, '')
+          .replace(/\s+Diagram$/i, '')
+          .trim();
+        return title.replace(/[^a-z0-9_\-]+/gi, '-')
+                    .toLowerCase()
+                    .replace(/^-+|-+$/g, '') || 'diagram';
+      }
+
+      function currentBg() {
+        return getComputedStyle(document.body).backgroundColor || '#ffffff';
+      }
+
+      /**
+       * Serialize the main SVG into a standalone document.
+       *
+       * Two modes:
+       * - Default (opts.autoTheme=false) — locks the serialized SVG to the
+       *   viewer's current theme. Used by the raster pipeline
+       *   (PNG/JPEG/WebP/clipboard) because canvas rasterization needs
+       *   deterministic colors; a raster cannot react to
+       *   prefers-color-scheme after encoding.
+       * - autoTheme=true — emits BOTH dark and light variable sets plus a
+       *   `@media (prefers-color-scheme)` rule so the resulting SVG
+       *   self-themes when embedded in GitHub READMEs or other hosts that
+       *   expose a color scheme. Used for "Download SVG".
+       */
+      function applyRouteSnapshot(clone, snapshot) {
+        if (!snapshot || !Array.isArray(snapshot.nodeIds) || !Array.isArray(snapshot.edges) ||
+            snapshot.nodeIds.length < 2 || snapshot.edges.length !== snapshot.nodeIds.length - 1 ||
+            snapshot.hops !== snapshot.edges.length ||
+            !snapshot.source || !snapshot.target ||
+            snapshot.source.id !== snapshot.nodeIds[0] ||
+            snapshot.target.id !== snapshot.nodeIds[snapshot.nodeIds.length - 1]) return false;
+
+        clone.removeAttribute('data-animation');
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-animate]'), function (element) {
+          element.removeAttribute('data-animate');
+          element.style.removeProperty('--step');
+        });
+
+        var cloneNodes = Array.prototype.slice.call(clone.querySelectorAll('[data-node-id]'));
+        var cloneEdges = Array.prototype.slice.call(clone.querySelectorAll('[data-edge-key]'));
+        var nodeIds = Object.create(null);
+        var edgeKeys = Object.create(null);
+        var nodeMatches = [];
+        var edgeMatches = [];
+
+        for (var nodeIndex = 0; nodeIndex < snapshot.nodeIds.length; nodeIndex++) {
+          var nodeId = snapshot.nodeIds[nodeIndex];
+          if (typeof nodeId !== 'string' || !nodeId || nodeIds[nodeId]) return false;
+          var matchedNodes = cloneNodes.filter(function (candidate) {
+            return candidate.getAttribute('data-node-id') === nodeId;
+          });
+          if (matchedNodes.length !== 1) return false;
+          nodeIds[nodeId] = true;
+          nodeMatches.push(matchedNodes);
+        }
+
+        for (var edgeIndex = 0; edgeIndex < snapshot.edges.length; edgeIndex++) {
+          var edge = snapshot.edges[edgeIndex];
+          var fromId = snapshot.nodeIds[edgeIndex];
+          var toId = snapshot.nodeIds[edgeIndex + 1];
+          if (!edge || typeof edge.key !== 'string' || !edge.key || edgeKeys[edge.key] ||
+              edge.from !== fromId || edge.to !== toId) return false;
+          var matchedEdges = cloneEdges.filter(function (candidate) {
+            return candidate.getAttribute('data-edge-key') === edge.key;
+          });
+          var drawableMatches = matchedEdges.filter(hasDrawableGeometry);
+          if (!matchedEdges.length || drawableMatches.length !== 1 || !matchedEdges.every(function (candidate) {
+            return candidate.getAttribute('data-edge-from') === edge.from &&
+              candidate.getAttribute('data-edge-to') === edge.to &&
+              (candidate.getAttribute('data-edge-id') || '') === (edge.id || '');
+          })) return false;
+          edgeKeys[edge.key] = true;
+          edgeMatches.push(matchedEdges);
+        }
+
+        clone.setAttribute('data-share-route', '');
+        nodeMatches.forEach(function (matches, step) {
+          matches.forEach(function (element) {
+            element.setAttribute('data-share-route-match', '');
+            element.setAttribute('data-share-route-step', String(step));
+            if (step === 0) element.setAttribute('data-share-route-start', '');
+            else if (step === snapshot.nodeIds.length - 1) element.setAttribute('data-share-route-end', '');
+            else element.setAttribute('data-share-route-middle', '');
+          });
+        });
+        edgeMatches.forEach(function (matches, step) {
+          matches.forEach(function (element) {
+            element.setAttribute('data-share-route-match', '');
+            element.setAttribute('data-share-route-step', String(step));
+          });
+        });
+
+        return clone.hasAttribute('data-share-route') &&
+          !clone.hasAttribute('data-animation') &&
+          !clone.hasAttribute('data-route-active') &&
+          !clone.hasAttribute('data-route-journey') &&
+          clone.querySelectorAll('[data-animate], [data-route-match], [data-route-step], [data-route-start], [data-route-end], [data-route-journey-state], [data-route-journey-current], [data-route-journey-overlay]').length === 0 &&
+          clone.querySelectorAll('[data-share-route-match]').length ===
+            nodeMatches.reduce(function (count, matches) { return count + matches.length; }, 0) +
+            edgeMatches.reduce(function (count, matches) { return count + matches.length; }, 0);
+      }
+
+      function applyReachSnapshot(clone, snapshot) {
+        if (!snapshot || (snapshot.direction !== 'upstream' && snapshot.direction !== 'downstream') ||
+            !snapshot.origin || typeof snapshot.origin.id !== 'string' || !snapshot.origin.id ||
+            typeof snapshot.origin.label !== 'string' || !snapshot.origin.label.trim() ||
+            !Array.isArray(snapshot.nodeIds) || snapshot.nodeIds.length < 2 ||
+            !Array.isArray(snapshot.edges) || !snapshot.edges.length ||
+            !snapshot.depths || typeof snapshot.depths !== 'object' ||
+            !Number.isInteger(snapshot.maxDepth) || snapshot.maxDepth < 1 ||
+            snapshot.nodeIds[0] !== snapshot.origin.id) return false;
+
+        clone.removeAttribute('data-animation');
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-animate]'), function (element) {
+          element.removeAttribute('data-animate');
+          element.style.removeProperty('--step');
+        });
+
+        var cloneNodes = Array.prototype.slice.call(clone.querySelectorAll('[data-node-id]'));
+        var cloneEdges = Array.prototype.slice.call(clone.querySelectorAll('[data-edge-key]'));
+        var nodeIds = Object.create(null);
+        var edgeKeys = Object.create(null);
+        var nodeMatches = [];
+        var edgeMatches = [];
+        var measuredMaxDepth = 0;
+
+        for (var nodeIndex = 0; nodeIndex < snapshot.nodeIds.length; nodeIndex++) {
+          var nodeId = snapshot.nodeIds[nodeIndex];
+          var depth = snapshot.depths[nodeId];
+          if (typeof nodeId !== 'string' || !nodeId || nodeIds[nodeId] ||
+              !Number.isInteger(depth) || depth < 0 || depth > snapshot.maxDepth ||
+              (nodeId === snapshot.origin.id ? depth !== 0 : depth < 1)) return false;
+          var matchedNodes = cloneNodes.filter(function (candidate) {
+            return candidate.getAttribute('data-node-id') === nodeId;
+          });
+          if (matchedNodes.length !== 1) return false;
+          nodeIds[nodeId] = true;
+          measuredMaxDepth = Math.max(measuredMaxDepth, depth);
+          nodeMatches.push({ elements: matchedNodes, id: nodeId, depth: depth });
+        }
+        if (measuredMaxDepth !== snapshot.maxDepth) return false;
+
+        for (var edgeIndex = 0; edgeIndex < snapshot.edges.length; edgeIndex++) {
+          var edge = snapshot.edges[edgeIndex];
+          if (!edge || typeof edge.key !== 'string' || !edge.key || edgeKeys[edge.key] ||
+              !nodeIds[edge.from] || !nodeIds[edge.to] ||
+              !Number.isInteger(edge.depth) || edge.depth < 1 || edge.depth > snapshot.maxDepth ||
+              edge.depth !== Math.max(snapshot.depths[edge.from], snapshot.depths[edge.to])) return false;
+          var matchedEdges = cloneEdges.filter(function (candidate) {
+            return candidate.getAttribute('data-edge-key') === edge.key;
+          });
+          var drawableMatches = matchedEdges.filter(hasDrawableGeometry);
+          if (!matchedEdges.length || drawableMatches.length !== 1 || !matchedEdges.every(function (candidate) {
+            return candidate.getAttribute('data-edge-from') === edge.from &&
+              candidate.getAttribute('data-edge-to') === edge.to &&
+              (candidate.getAttribute('data-edge-id') || '') === (edge.id || '');
+          })) return false;
+          edgeKeys[edge.key] = true;
+          edgeMatches.push({ elements: matchedEdges, depth: edge.depth });
+        }
+
+        clone.setAttribute('data-share-reach', snapshot.direction);
+        nodeMatches.forEach(function (match) {
+          match.elements.forEach(function (element) {
+            element.setAttribute('data-share-reach-match', '');
+            element.setAttribute('data-share-reach-depth', String(match.depth));
+            if (match.id === snapshot.origin.id) element.setAttribute('data-share-reach-origin', '');
+          });
+        });
+        edgeMatches.forEach(function (match) {
+          match.elements.forEach(function (element) {
+            element.setAttribute('data-share-reach-match', '');
+            element.setAttribute('data-share-reach-depth', String(match.depth));
+          });
+        });
+
+        return clone.getAttribute('data-share-reach') === snapshot.direction &&
+          !clone.hasAttribute('data-animation') &&
+          !clone.hasAttribute('data-reach-active') &&
+          clone.querySelectorAll('[data-animate], [data-reach-match], [data-reach-origin], [data-reach-depth]').length === 0 &&
+          clone.querySelectorAll('[data-share-reach-origin]').length === 1 &&
+          clone.querySelectorAll('[data-share-reach-match]').length ===
+            nodeMatches.reduce(function (count, match) { return count + match.elements.length; }, 0) +
+            edgeMatches.reduce(function (count, match) { return count + match.elements.length; }, 0);
+      }
+
+      function serializeSvg(scale, opts) {
+        // scale: integer multiplier for intrinsic SVG pixel dimensions used by
+        // the raster path. Defaults to 1 (natural size) for SVG download.
+        scale = scale || 1;
+        opts = opts || {};
+        var autoTheme = opts.autoTheme === true;
+        var svg = document.querySelector('.diagram-container svg');
+        var clone = svg.cloneNode(true);
+
+        // View transforms and neighborhood focus are HTML exploration state,
+        // never part of a downloaded full-diagram artifact.
+        clone.style.removeProperty('transform');
+        clone.removeAttribute('data-view-scale');
+        clone.removeAttribute('data-focus-active');
+        clone.removeAttribute('data-reach-active');
+        clone.removeAttribute('data-lens-active');
+        clone.removeAttribute('data-lens-flow-count');
+        clone.removeAttribute('data-lens-flow-density');
+        clone.removeAttribute('data-legend-preview-active');
+        clone.removeAttribute('data-relationship-preview-active');
+        clone.removeAttribute('data-relationship-direct-active');
+        clone.removeAttribute('data-relationship-pin-active');
+        clone.removeAttribute('data-intent-trace-active');
+        clone.removeAttribute('data-route-picking');
+        clone.removeAttribute('data-route-active');
+        clone.removeAttribute('data-route-journey');
+        clone.removeAttribute('data-share-route');
+        clone.removeAttribute('data-share-reach');
+        clone.removeAttribute('data-story-active');
+        clone.removeAttribute('data-story-playing');
+        clone.removeAttribute('data-story-beat');
+        clone.removeAttribute('data-story-next');
+        clone.removeAttribute('data-story-follow');
+        clone.removeAttribute('data-chapter-handoff');
+        clone.removeAttribute('data-chapter-anchor');
+        clone.removeAttribute('data-chapter-preview');
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-chapter-handoff-overlay]'), function (el) {
+          el.remove();
+        });
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-chapter-role]'), function (el) {
+          el.removeAttribute('data-chapter-role');
+        });
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-chapter-preview-role]'), function (el) {
+          el.removeAttribute('data-chapter-preview-role');
+        });
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-story-overlay], [data-story-carrier-overlay]'), function (el) {
+          el.remove();
+        });
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-intent-trace-overlay]'), function (el) {
+          el.remove();
+        });
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-route-probe-overlay]'), function (el) {
+          el.remove();
+        });
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-route-journey-overlay]'), function (el) {
+          el.remove();
+        });
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-semantic-lens-overlay]'), function (el) {
+          el.remove();
+        });
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-legend-bridge-runtime]'), function (el) {
+          el.remove();
+        });
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-legend-kind]'), function (el) {
+          el.removeAttribute('data-legend-kind');
+          el.removeAttribute('data-legend-label');
+          el.removeAttribute('data-legend-count');
+          el.removeAttribute('data-legend-zero');
+          el.removeAttribute('data-legend-selected');
+          el.removeAttribute('role');
+          el.removeAttribute('tabindex');
+          el.removeAttribute('aria-label');
+          el.removeAttribute('aria-pressed');
+          el.removeAttribute('aria-haspopup');
+          el.removeAttribute('aria-controls');
+          el.removeAttribute('aria-expanded');
+        });
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-legend-bridge]'), function (el) {
+          el.removeAttribute('data-le
