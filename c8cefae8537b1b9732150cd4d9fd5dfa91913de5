@@ -11181,4 +11181,2569 @@
     /* ============================================================
        Semantic Radar — simplified semantic bounds + live viewport.
        The radar is built at runtime so the checked artifact still contains
-       o
+       one canonical SVG block, and export serialization remains untouched.
+       ============================================================ */
+    Archify.radar = (function () {
+      var container = document.querySelector('.diagram-container');
+      var diagram = container.querySelector(':scope > svg');
+      var panel = document.getElementById('overview-map');
+      var surface = document.getElementById('overview-map-surface');
+      var status = document.getElementById('overview-map-status');
+      var trigger = document.getElementById('btn-overview-map');
+      var closeBtn = document.getElementById('overview-map-close');
+      var namespace = 'http://www.w3.org/2000/svg';
+      var viewBox = diagram.viewBox && diagram.viewBox.baseVal;
+      var mapSvg = document.createElementNS(namespace, 'svg');
+      var nodeLayer = document.createElementNS(namespace, 'g');
+      var viewport = document.createElementNS(namespace, 'rect');
+      var nodes = [];
+      var drag = null;
+      var syncFrame = 0;
+
+      mapSvg.setAttribute('role', 'group');
+      mapSvg.setAttribute('aria-label', 'Semantic diagram radar nodes');
+      mapSvg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+      nodeLayer.setAttribute('class', 'overview-map-nodes');
+      viewport.setAttribute('class', 'overview-map-viewport');
+      viewport.setAttribute('rx', '3');
+      viewport.setAttribute('ry', '3');
+      mapSvg.appendChild(nodeLayer);
+      mapSvg.appendChild(viewport);
+      surface.appendChild(mapSvg);
+
+      function nodeLabel(node, fallback) {
+        return node.getAttribute('data-node-label') ||
+          (node.getAttribute('aria-label') || fallback).replace(/^Focus\s+/, '').split(',')[0];
+      }
+      function build() {
+        if (!viewBox || viewBox.width <= 0 || viewBox.height <= 0) return false;
+        mapSvg.setAttribute('viewBox', [viewBox.x, viewBox.y, viewBox.width, viewBox.height].join(' '));
+        nodeLayer.textContent = '';
+        nodes = [];
+        Array.prototype.forEach.call(diagram.querySelectorAll('[data-node-id]'), function (node) {
+          var box;
+          try { box = node.getBBox(); } catch (_) { box = null; }
+          if (!box || box.width <= 0 || box.height <= 0) return;
+          var id = node.getAttribute('data-node-id');
+          var rect = document.createElementNS(namespace, 'rect');
+          rect.setAttribute('class', 'overview-map-node');
+          rect.setAttribute('x', String(box.x));
+          rect.setAttribute('y', String(box.y));
+          rect.setAttribute('width', String(Math.max(3, box.width)));
+          rect.setAttribute('height', String(Math.max(3, box.height)));
+          rect.setAttribute('rx', String(Math.max(2, Math.min(8, Math.min(box.width, box.height) * 0.1))));
+          rect.setAttribute('data-radar-node-id', id);
+          rect.setAttribute('data-kind', node.getAttribute('data-node-kind') || 'neutral');
+          rect.setAttribute('tabindex', '0');
+          rect.setAttribute('role', 'button');
+          rect.setAttribute('aria-label', 'Focus ' + nodeLabel(node, id) + ' from Semantic Radar');
+          nodeLayer.appendChild(rect);
+          nodes.push({ id: id, node: node, rect: rect });
+        });
+        status.textContent = nodes.length + ' nodes · full map';
+        return true;
+      }
+      function updateDocking() {
+        if (panel.hidden) return;
+        var containerRect = container.getBoundingClientRect();
+        var intersectsWindow = containerRect.bottom > 12 && containerRect.top < window.innerHeight - 12;
+        if (!intersectsWindow) {
+          panel.removeAttribute('data-docked');
+          panel.removeAttribute('data-dock-side');
+          panel.style.removeProperty('--archify-radar-right');
+          panel.style.removeProperty('--archify-radar-left');
+          panel.style.removeProperty('--archify-radar-top');
+          return;
+        }
+        var active = diagram.querySelector('[data-focus-selected]');
+        var activeRect = active ? active.getBoundingClientRect() : null;
+        var dockLeft = !!(activeRect && activeRect.left + activeRect.width / 2 > window.innerWidth / 2);
+        var right = Math.max(16, window.innerWidth - Math.min(containerRect.right - 16, window.innerWidth - 16));
+        var left = Math.max(16, Math.min(containerRect.left + 16, window.innerWidth - panel.offsetWidth - 16));
+        var topLimit = Math.max(16, containerRect.top + 16);
+        var bottomLimit = Math.min(window.innerHeight - 16, containerRect.bottom - 16);
+        var panelLeft = dockLeft ? left : window.innerWidth - right - panel.offsetWidth;
+        var panelRight = panelLeft + panel.offsetWidth;
+        var lens = document.getElementById('focus-chip');
+        var lensRect = lens && !lens.hidden ? lens.getBoundingClientRect() : null;
+        var blockers = [activeRect, lensRect].filter(function (rect) {
+          return rect && rect.right > panelLeft && rect.left < panelRight;
+        });
+        var desiredTop = bottomLimit - panel.offsetHeight;
+        var candidates = [desiredTop, topLimit];
+        blockers.forEach(function (rect) {
+          candidates.push(rect.top - 10 - panel.offsetHeight, rect.bottom + 10);
+        });
+        var valid = candidates.filter(function (candidate) {
+          if (candidate < topLimit || candidate + panel.offsetHeight > bottomLimit) return false;
+          return blockers.every(function (rect) {
+            return candidate + panel.offsetHeight <= rect.top - 10 || candidate >= rect.bottom + 10;
+          });
+        });
+        valid.sort(function (a, b) { return Math.abs(a - desiredTop) - Math.abs(b - desiredTop); });
+        var top = valid.length ? valid[0] : Math.max(topLimit, desiredTop);
+        top = Math.min(window.innerHeight - panel.offsetHeight - 16, top);
+        panel.setAttribute('data-docked', 'true');
+        panel.setAttribute('data-dock-side', dockLeft ? 'left' : 'right');
+        panel.style.setProperty('--archify-radar-right', Math.round(right) + 'px');
+        panel.style.setProperty('--archify-radar-left', Math.round(left) + 'px');
+        panel.style.setProperty('--archify-radar-top', Math.round(Math.max(16, top)) + 'px');
+      }
+      function syncNow() {
+        syncFrame = 0;
+        if (panel.hidden || !Archify.view || typeof Archify.view.logicalViewport !== 'function') return;
+        updateDocking();
+        var visible = Archify.view.logicalViewport();
+        if (!visible) return;
+        viewport.setAttribute('x', String(visible.x));
+        viewport.setAttribute('y', String(visible.y));
+        viewport.setAttribute('width', String(visible.width));
+        viewport.setAttribute('height', String(visible.height));
+        var full = visible.width >= viewBox.width * 0.98 && visible.height >= viewBox.height * 0.98;
+        var mobileWide = window.innerWidth <= 720 && container.hasAttribute('data-wide-diagram');
+        var viewportCopy = full
+          ? 'full map'
+          : (mobileWide ? Math.round(visible.width / viewBox.width * 100) + '% width' : Math.round(visible.scale * 100) + '% viewport');
+        status.textContent = nodes.length + ' nodes · ' + viewportCopy;
+        nodes.forEach(function (item) {
+          var active = item.node.hasAttribute('data-focus-selected') ||
+            item.node.getAttribute('data-story-beat-state') === 'active';
+          if (active) item.rect.setAttribute('data-radar-active', 'true');
+          else item.rect.removeAttribute('data-radar-active');
+        });
+      }
+      function sync() {
+        if (syncFrame) return;
+        syncFrame = requestAnimationFrame(syncNow);
+      }
+      function setOpen(next, options) {
+        options = options || {};
+        next = Boolean(next);
+        if (next && Archify.semanticLens && typeof Archify.semanticLens.clearPreview === 'function') Archify.semanticLens.clearPreview();
+        if (next && Archify.semanticLens && Archify.semanticLens.isOpen()) {
+          Archify.semanticLens.close({ restoreFocus: false });
+        }
+        panel.hidden = !next;
+        trigger.setAttribute('aria-expanded', next ? 'true' : 'false');
+        trigger.setAttribute('aria-label', next ? 'Close semantic radar' : 'Open semantic radar');
+        if (next) {
+          build();
+          updateDocking();
+          sync();
+          if (options.focus === true) surface.focus();
+        } else {
+          panel.removeAttribute('data-docked');
+          panel.removeAttribute('data-dock-side');
+          panel.style.removeProperty('--archify-radar-right');
+          panel.style.removeProperty('--archify-radar-left');
+          panel.style.removeProperty('--archify-radar-top');
+          if (options.restoreFocus === true) trigger.focus();
+        }
+        return next;
+      }
+      function toggle() { return setOpen(panel.hidden, { focus: false }); }
+      function close(options) { return setOpen(false, options); }
+      function bringNodeIntoWindow(node) {
+        var delay = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 540;
+        window.setTimeout(function () {
+          var rect = node.getBoundingClientRect();
+          var safeTop = 64;
+          var safeBottom = window.innerHeight - 64;
+          if (rect.top >= safeTop && rect.bottom <= safeBottom) return;
+          var top = Math.max(0, window.scrollY + rect.top + rect.height / 2 - window.innerHeight / 2);
+          try { window.scrollTo({ top: top, behavior: delay ? 'smooth' : 'auto' }); }
+          catch (_) { window.scrollTo(0, top); }
+        }, delay);
+      }
+      function focusNode(id) {
+        var main = diagram.querySelector('[data-node-id="' + id + '"]');
+        if (!main) return false;
+        if (Archify.guidedViews && typeof Archify.guidedViews.showAll === 'function') {
+          Archify.guidedViews.showAll({ clearFocus: false, updateUrl: false });
+        }
+        if (Archify.focus && typeof Archify.focus.set === 'function') {
+          Archify.focus.set(id, { toggle: false });
+        }
+        if (Archify.view && typeof Archify.view.reveal === 'function') {
+          Archify.view.reveal([id], { includeNeighbors: true, reason: 'radar' });
+        }
+        bringNodeIntoWindow(main);
+        try { main.focus({ preventScroll: true }); } catch (_) { try { main.focus(); } catch (_) {} }
+        sync();
+        return true;
+      }
+      function diagramPoint(event) {
+        var matrix = mapSvg.getScreenCTM();
+        if (!matrix) return null;
+        var point = mapSvg.createSVGPoint();
+        point.x = event.clientX;
+        point.y = event.clientY;
+        return point.matrixTransform(matrix.inverse());
+      }
+      function navigate(event) {
+        var point = diagramPoint(event);
+        if (!point || !Archify.view || typeof Archify.view.centerAt !== 'function') return;
+        Archify.view.centerAt(point.x, point.y, { minimumScale: 1.5, instant: true });
+        sync();
+      }
+      function endDrag(event) {
+        if (!drag) return;
+        drag = null;
+        panel.removeAttribute('data-dragging');
+        container.classList.remove('is-panning');
+        try { surface.releasePointerCapture(event.pointerId); } catch (_) {}
+      }
+
+      trigger.addEventListener('click', toggle);
+      closeBtn.addEventListener('click', function () { close({ restoreFocus: true }); });
+      surface.addEventListener('pointerdown', function (event) {
+        if (event.button !== 0 || event.target.closest('[data-radar-node-id]')) return;
+        event.preventDefault();
+        drag = { pointerId: event.pointerId };
+        panel.setAttribute('data-dragging', 'true');
+        container.classList.add('is-panning');
+        try { surface.setPointerCapture(event.pointerId); } catch (_) {}
+        navigate(event);
+      });
+      surface.addEventListener('pointermove', function (event) {
+        if (!drag || drag.pointerId !== event.pointerId) return;
+        navigate(event);
+      });
+      surface.addEventListener('pointerup', endDrag);
+      surface.addEventListener('pointercancel', endDrag);
+      surface.addEventListener('click', function (event) {
+        var node = event.target.closest('[data-radar-node-id]');
+        if (node) focusNode(node.getAttribute('data-radar-node-id'));
+      });
+      surface.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          event.stopPropagation();
+          close({ restoreFocus: true });
+          return;
+        }
+        var node = event.target.closest('[data-radar-node-id]');
+        if (node && (event.key === 'Enter' || event.key === ' ')) {
+          event.preventDefault();
+          focusNode(node.getAttribute('data-radar-node-id'));
+          return;
+        }
+        if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight' && event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+        var visible = Archify.view && Archify.view.logicalViewport ? Archify.view.logicalViewport() : null;
+        if (!visible) return;
+        event.preventDefault();
+        var x = visible.x + visible.width / 2;
+        var y = visible.y + visible.height / 2;
+        var stepX = Math.max(12, visible.width * 0.24);
+        var stepY = Math.max(12, visible.height * 0.24);
+        if (event.key === 'ArrowLeft') x -= stepX;
+        else if (event.key === 'ArrowRight') x += stepX;
+        else if (event.key === 'ArrowUp') y -= stepY;
+        else y += stepY;
+        Archify.view.centerAt(x, y, { minimumScale: 1.5, instant: true });
+        sync();
+      });
+      window.addEventListener('resize', sync);
+      window.addEventListener('scroll', function () { updateDocking(); sync(); }, { passive: true });
+      requestAnimationFrame(build);
+
+      return {
+        open: function () { return setOpen(true); },
+        close: close,
+        toggle: toggle,
+        sync: sync,
+        focus: focusNode,
+        isOpen: function () { return !panel.hidden; },
+        count: function () { return nodes.length; }
+      };
+    })();
+
+    /* ============================================================
+       Presentation Stage — a shareable, viewport-filling live view.
+       It changes only HTML layout and URL state; SVG semantics and export
+       serialization remain untouched. Escape first clears an active guided
+       view/focus, then exits the stage.
+       ============================================================ */
+    Archify.presentation = (function () {
+      var html = document.documentElement;
+      var btn = document.getElementById('btn-present');
+      var label = document.getElementById('present-label');
+      var previousScrollY = 0;
+
+      function active() { return html.getAttribute('data-present') === 'true'; }
+
+      function updateUrl(next) {
+        try {
+          var url = new URL(window.location.href);
+          if (next) url.searchParams.set('present', '1');
+          else url.searchParams.delete('present');
+          history.replaceState(null, '', url.pathname + url.search + url.hash);
+        } catch (_) {}
+      }
+
+      function render(next) {
+        btn.setAttribute('aria-pressed', next ? 'true' : 'false');
+        btn.setAttribute('aria-label', next ? 'Exit presentation stage' : 'Enter presentation stage');
+        btn.title = next ? 'Exit presentation stage (F or Escape)' : 'Presentation stage (F)';
+        label.textContent = next ? 'Exit' : 'Present';
+      }
+
+      function setActive(next, options) {
+        options = options || {};
+        next = Boolean(next);
+        if (next === active()) {
+          render(next);
+          return next;
+        }
+        if (next) {
+          if (Archify.semanticLens && typeof Archify.semanticLens.clearPreview === 'function') Archify.semanticLens.clearPreview();
+          previousScrollY = window.scrollY || 0;
+          html.setAttribute('data-present', 'true');
+          try { window.scrollTo(0, 0); } catch (_) {}
+        } else {
+          html.removeAttribute('data-present');
+        }
+        render(next);
+        if (options.updateUrl !== false) updateUrl(next);
+        requestAnimationFrame(function () {
+          if (Archify.view && typeof Archify.view.reset === 'function') {
+            Archify.view.reset({ automatic: true });
+            requestAnimationFrame(function () {
+              if (Archify.view && typeof Archify.view.sync === 'function') Archify.view.sync();
+            });
+          }
+          if (!next && previousScrollY) {
+            try { window.scrollTo(0, previousScrollY); } catch (_) {}
+          }
+        });
+        return next;
+      }
+
+      function toggle() { return setActive(!active()); }
+
+      render(active());
+      btn.addEventListener('click', toggle);
+
+      return {
+        enter: function () { return setActive(true); },
+        exit: function () { return setActive(false); },
+        toggle: toggle,
+        active: active
+      };
+    })();
+
+    /* ============================================================
+       Node Finder — stable-ID search over the existing semantic SVG.
+       Search never changes the IR or SVG geometry: selecting a result resets
+       the viewport, releases a guided view, and delegates to semantic focus.
+       ============================================================ */
+    Archify.finder = (function () {
+      var html = document.documentElement;
+      var container = document.querySelector('.diagram-container');
+      var svg = container.querySelector('svg');
+      var trigger = document.getElementById('btn-node-finder');
+      var panel = document.getElementById('node-finder');
+      var heading = document.getElementById('node-finder-title');
+      var closeBtn = document.getElementById('node-finder-close');
+      var input = document.getElementById('node-finder-input');
+      var results = document.getElementById('node-finder-results');
+      var empty = document.getElementById('node-finder-empty');
+      var status = document.getElementById('node-finder-status');
+      var visibleItems = [];
+
+      function defaultContext() {
+        return {
+          kind: 'focus',
+          title: 'Find a node',
+          placeholder: 'Search labels or IDs',
+          empty: 'No matching nodes',
+          resultsLabel: 'Diagram nodes',
+          availableNoun: 'nodes',
+          allowedIds: null,
+          badges: null
+        };
+      }
+
+      var context = defaultContext();
+
+      function semanticType(node) {
+        var authored = node.getAttribute('data-node-kind');
+        if (authored) return authored;
+        var types = ['frontend', 'backend', 'database', 'cloud', 'security', 'messagebus', 'external'];
+        return types.find(function (type) { return node.querySelector('.c-' + type); }) || 'node';
+      }
+
+      function connectionsFor(id) {
+        var count = 0;
+        var seen = {};
+        Array.prototype.forEach.call(svg.querySelectorAll('[data-edge-from][data-edge-to]'), function (edge) {
+          var from = edge.getAttribute('data-edge-from');
+          var to = edge.getAttribute('data-edge-to');
+          var key = from + '\u0000' + to;
+          if ((from === id || to === id) && !seen[key]) {
+            seen[key] = true;
+            count += 1;
+          }
+        });
+        return count;
+      }
+
+      var items = Array.prototype.map.call(svg.querySelectorAll('[data-node-id]'), function (node) {
+        var id = node.getAttribute('data-node-id');
+        var label = node.getAttribute('data-node-label') || (node.getAttribute('aria-label') || id).replace(/^Focus\s+/, '');
+        var text = (node.textContent || '').replace(/\s+/g, ' ').trim();
+        var sublabel = node.getAttribute('data-node-sublabel') || '';
+        var context = node.getAttribute('data-node-context') || '';
+        var tag = node.getAttribute('data-node-tag') || '';
+        var type = semanticType(node);
+        var sources = Archify.sourceEvidence.node(id);
+        var sourceSearch = sources.map(function (source) {
+          return [source.path, source.label, source.line, source.endLine].filter(Boolean).join(' ');
+        }).join(' ');
+        return {
+          id: id,
+          label: label,
+          type: type,
+          sublabel: sublabel,
+          context: context,
+          tag: tag,
+          sources: sources,
+          links: connectionsFor(id),
+          search: (id + ' ' + label + ' ' + type + ' ' + sublabel + ' ' + context + ' ' + tag + ' ' + sourceSearch + ' ' + text).toLowerCase(),
+          node: node
+        };
+      });
+
+      function resultButtons() {
+        return Array.prototype.slice.call(results.querySelectorAll('.node-finder-result'));
+      }
+
+      function resolveContext(options) {
+        var requested = options && options.context ? options.context : null;
+        if (!requested && Archify.routeProbe && typeof Archify.routeProbe.finderContext === 'function') {
+          requested = Archify.routeProbe.finderContext();
+        }
+        if (!requested) return defaultContext();
+        var resolved = defaultContext();
+        Object.keys(requested).forEach(function (key) { resolved[key] = requested[key]; });
+        return resolved;
+      }
+
+      function availableItems() {
+        if (!context.allowedIds) return items.slice();
+        return items.filter(function (item) { return context.allowedIds.indexOf(item.id) !== -1; });
+      }
+
+      function applyContext() {
+        panel.setAttribute('data-context', context.kind);
+        heading.textContent = context.title;
+        input.placeholder = context.placeholder;
+        empty.textContent = context.empty;
+        results.setAttribute('aria-label', context.resultsLabel);
+      }
+
+      function select(id) {
+        var item = items.find(function (candidate) { return candidate.id === id; });
+        if (!item) return false;
+        var routeSelection = context.kind === 'route-source' || context.kind === 'route-target';
+        if (routeSelection) {
+          if (!Archify.routeProbe || typeof Archify.routeProbe.choose !== 'function' || !Archify.routeProbe.choose(id)) return false;
+          if (Archify.routeProbe.active() === 'target' && Archify.view && typeof Archify.view.reveal === 'function') {
+            Archify.view.reveal([id], { includeNeighbors: true, reason: 'route-pick' });
+          }
+          close({ restoreFocus: false });
+          try { item.node.focus({ preventScroll: true }); } catch (_) { try { item.node.focus(); } catch (_) {} }
+          return true;
+        }
+        if (Archify.guidedViews && typeof Archify.guidedViews.showAll === 'function') {
+          Archify.guidedViews.showAll({ clearFocus: false, updateUrl: false });
+        }
+        if (Archify.view && typeof Archify.view.reset === 'function') Archify.view.reset({ automatic: true });
+        Archify.focus.set(id, { toggle: false });
+        if (Archify.view && typeof Archify.view.reveal === 'function') {
+          Archify.view.reveal([id], { includeNeighbors: true, reason: 'finder' });
+        }
+        close({ restoreFocus: false });
+        try { item.node.focus({ preventScroll: true }); } catch (_) { try { item.node.focus(); } catch (_) {} }
+        return true;
+      }
+
+      function render(query) {
+        query = (query || '').trim().toLowerCase();
+        var available = availableItems();
+        visibleItems = available.filter(function (item) { return !query || item.search.indexOf(query) !== -1; });
+        results.textContent = '';
+        visibleItems.forEach(function (item) {
+          var button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'node-finder-result';
+          button.setAttribute('data-node-id', item.id);
+          var badge = context.badges && context.badges[item.id]
+            ? context.badges[item.id]
+            : context.kind === 'focus'
+              ? item.links + (item.links === 1 ? ' link' : ' links')
+              : String(item.links);
+          var action = context.kind === 'route-source'
+            ? 'Choose ' + item.label + ' as route start'
+            : context.kind === 'route-target'
+              ? 'Choose ' + item.label + ' as route destination, ' + badge
+              : 'Focus ' + item.label + ', ' + item.links + ' related connection' + (item.links === 1 ? '' : 's');
+          button.setAttribute('aria-label', action);
+
+          var name = document.createElement('strong');
+          name.textContent = item.label;
+          var links = document.createElement('em');
+          links.textContent = badge;
+          links.title = context.kind === 'focus' ? badge : action;
+          var meta = document.createElement('small');
+          meta.textContent = [item.type, item.id, item.sublabel, item.tag].filter(Boolean).join(' \u00b7 ');
+          meta.title = [item.type, item.id, item.context, item.sublabel, item.tag].filter(Boolean).join(' \u00b7 ');
+          button.appendChild(name);
+          button.appendChild(links);
+          button.appendChild(meta);
+          button.addEventListener('click', function () { select(item.id); });
+          results.appendChild(button);
+        });
+        empty.hidden = visibleItems.length !== 0;
+        status.textContent = query
+          ? visibleItems.length + ' of ' + available.length + ' ' + context.availableNoun
+          : available.length + ' ' + context.availableNoun;
+      }
+
+      function open(options) {
+        if (html.getAttribute('data-embed') === 'true') return false;
+        if (Archify.semanticLens && typeof Archify.semanticLens.clearPreview === 'function') Archify.semanticLens.clearPreview();
+        if (Archify.exportMenu && Archify.exportMenu.isOpen()) Archify.exportMenu.close(false);
+        if (Archify.semanticLens && Archify.semanticLens.isOpen()) Archify.semanticLens.close({ restoreFocus: false });
+        context = resolveContext(options || {});
+        applyContext();
+        panel.hidden = false;
+        trigger.setAttribute('aria-expanded', 'true');
+        if (context.kind.indexOf('route-') === 0 && Archify.routeProbe && typeof Archify.routeProbe.finderOpening === 'function') {
+          Archify.routeProbe.finderOpening();
+        }
+        input.value = '';
+        render('');
+        requestAnimationFrame(function () { input.focus(); });
+        return true;
+      }
+
+      function close(options) {
+        options = options || {};
+        var routeContext = context.kind.indexOf('route-') === 0;
+        panel.hidden = true;
+        trigger.setAttribute('aria-expanded', 'false');
+        input.value = '';
+        if (routeContext && Archify.routeProbe && typeof Archify.routeProbe.finderClosed === 'function') {
+          Archify.routeProbe.finderClosed({ restoreFocus: options.restoreFocus !== false });
+        } else if (options.restoreFocus !== false) {
+          trigger.focus();
+        }
+      }
+
+      function toggle() { return panel.hidden ? open() : (close(), false); }
+
+      trigger.addEventListener('click', toggle);
+      closeBtn.addEventListener('click', function () { close(); });
+      input.addEventListener('input', function () { render(input.value); });
+      input.addEventListener('keydown', function (event) {
+        var buttons = resultButtons();
+        if (event.key === 'ArrowDown' && buttons.length) {
+          event.preventDefault();
+          buttons[0].focus();
+        } else if (event.key === 'Enter' && visibleItems.length) {
+          event.preventDefault();
+          select(visibleItems[0].id);
+        }
+      });
+      results.addEventListener('keydown', function (event) {
+        var buttons = resultButtons();
+        var index = buttons.indexOf(document.activeElement);
+        if (index < 0 || !buttons.length) return;
+        var next = null;
+        if (event.key === 'ArrowDown') next = (index + 1) % buttons.length;
+        else if (event.key === 'ArrowUp') next = (index - 1 + buttons.length) % buttons.length;
+        else if (event.key === 'Home') next = 0;
+        else if (event.key === 'End') next = buttons.length - 1;
+        if (next !== null) {
+          event.preventDefault();
+          buttons[next].focus();
+        }
+      });
+      panel.addEventListener('keydown', function (event) {
+        if (event.key !== 'Escape') return;
+        event.preventDefault();
+        event.stopPropagation();
+        close();
+      });
+      document.addEventListener('click', function (event) {
+        if (!panel.hidden && !panel.contains(event.target) && !event.target.closest('[data-node-finder-trigger]')) close({ restoreFocus: false });
+      });
+
+      render('');
+      return {
+        open: open,
+        close: close,
+        toggle: toggle,
+        select: select,
+        isOpen: function () { return !panel.hidden; },
+        context: function () { return context.kind; },
+        count: items.length
+      };
+    })();
+
+    /* ============================================================
+       Route Probe — shortest directed path over compiled semantics.
+       The graph is read from renderer-owned stable IDs and relationship
+       endpoints. BFS order follows authored DOM edge order, so equal-length
+       choices are deterministic without adding weights or a graph runtime.
+       ============================================================ */
+    Archify.routeProbe = (function () {
+      var html = document.documentElement;
+      var container = document.querySelector('.diagram-container');
+      var svg = container.querySelector(':scope > svg');
+      var trigger = document.getElementById('btn-route-probe');
+      var panel = document.getElementById('route-probe');
+      var title = document.getElementById('route-probe-title');
+      var path = document.getElementById('route-probe-path');
+      var status = document.getElementById('route-probe-status');
+      var findBtn = document.getElementById('route-probe-find');
+      var copyBtn = document.getElementById('route-probe-copy');
+      var clearBtn = document.getElementById('route-probe-clear');
+      var journeyControls = document.getElementById('route-journey-controls');
+      var journeyPrevBtn = document.getElementById('route-journey-prev');
+      var journeyPlayBtn = document.getElementById('route-journey-play');
+      var journeyPlayIcon = document.getElementById('route-journey-play-icon');
+      var journeyPlayLabel = document.getElementById('route-journey-play-label');
+      var journeyNextBtn = document.getElementById('route-journey-next');
+      var journeyOverviewBtn = document.getElementById('route-journey-overview');
+      var namespace = 'http://www.w3.org/2000/svg';
+      var mode = 'idle';
+      var startId = null;
+      var endId = null;
+      var activeNodeIds = [];
+      var activeEdges = [];
+      var journeyIndex = -1;
+      var journeyPlaying = false;
+      var journeyComplete = false;
+      var journeyGeneration = 0;
+      var journeyTimer = null;
+      var journeyStartedAt = 0;
+      var journeyElapsedMs = 0;
+      var journeyOwnerToken = 0;
+      var JOURNEY_DWELL_MS = 1100;
+
+      function nodes() {
+        return Array.prototype.slice.call(svg.querySelectorAll('[data-node-id]'));
+      }
+      function edges() {
+        return Array.prototype.slice.call(svg.querySelectorAll('[data-edge-from][data-edge-to]'));
+      }
+      function nodesById() {
+        var out = Object.create(null);
+        nodes().forEach(function (node) { out[node.getAttribute('data-node-id')] = node; });
+        return out;
+      }
+      function nodeLabel(node, fallback) {
+        return node.getAttribute('data-node-label') ||
+          (node.getAttribute('aria-label') || fallback).replace(/^Focus\s+/, '').split(',')[0];
+      }
+      function exportSnapshot() {
+        if (mode !== 'result' || activeNodeIds.length < 2 || activeEdges.length !== activeNodeIds.length - 1) return null;
+        var allNodes = nodes();
+        var byId = nodesById();
+        var seenNodeIds = Object.create(null);
+        var seenEdgeKeys = Object.create(null);
+        if (startId !== activeNodeIds[0] || endId !== activeNodeIds[activeNodeIds.length - 1] ||
+            activeNodeIds.some(function (id) {
+              if (seenNodeIds[id] || allNodes.filter(function (node) {
+                return node.getAttribute('data-node-id') === id;
+              }).length !== 1) return true;
+              seenNodeIds[id] = true;
+              return !byId[id];
+            }) ||
+            activeEdges.some(function (edge, index) {
+              if (!edge || !svg.contains(edge)) return true;
+              var edgeKey = edge.getAttribute('data-edge-key');
+              var edgeId = edge.getAttribute('data-edge-id') || '';
+              if (!edgeKey || seenEdgeKeys[edgeKey]) return true;
+              seenEdgeKeys[edgeKey] = true;
+              var fragments = Array.prototype.slice.call(svg.querySelectorAll('[data-edge-key]')).filter(function (candidate) {
+                return candidate.getAttribute('data-edge-key') === edgeKey;
+              });
+              var drawableFragments = fragments.filter(hasDrawableGeometry);
+              return !fragments.length || !fragments.every(function (fragment) {
+                return fragment.getAttribute('data-edge-from') === activeNodeIds[index] &&
+                  fragment.getAttribute('data-edge-to') === activeNodeIds[index + 1] &&
+                  (fragment.getAttribute('data-edge-id') || '') === edgeId;
+              }) || drawableFragments.length !== 1 || drawableFragments[0] !== edge ||
+                edge.getAttribute('data-edge-from') !== activeNodeIds[index] ||
+                edge.getAttribute('data-edge-to') !== activeNodeIds[index + 1];
+            })) return null;
+        return {
+          source: { id: startId, label: nodeLabel(byId[startId], startId) },
+          target: { id: endId, label: nodeLabel(byId[endId], endId) },
+          nodeIds: activeNodeIds.slice(),
+          hops: activeEdges.length,
+          edges: activeEdges.map(function (edge) {
+            return {
+              key: edge.getAttribute('data-edge-key'),
+              id: edge.getAttribute('data-edge-id') || '',
+              from: edge.getAttribute('data-edge-from'),
+              to: edge.getAttribute('data-edge-to'),
+              label: edge.getAttribute('data-edge-label') || ''
+            };
+          })
+        };
+      }
+      function edgeShapes(edge) {
+        if (/^(path|line|polyline)$/i.test(edge.tagName)) return [edge];
+        return Array.prototype.slice.call(edge.querySelectorAll('path, line, polyline'));
+      }
+      function removeOverlay() {
+        Array.prototype.forEach.call(svg.querySelectorAll('[data-route-probe-overlay]'), function (overlay) {
+          overlay.remove();
+        });
+      }
+      function removeJourneyPulse(options) {
+        options = options || {};
+        Array.prototype.forEach.call(svg.querySelectorAll('[data-route-journey-overlay]'), function (overlay) {
+          overlay.remove();
+        });
+        if (journeyOwnerToken && options.release !== false && Archify.motionGovernor) {
+          var token = journeyOwnerToken;
+          journeyOwnerToken = 0;
+          Archify.motionGovernor.release(token);
+        }
+      }
+      function stopJourneyTimer(options) {
+        options = options || {};
+        journeyGeneration += 1;
+        if (journeyTimer) {
+          if (options.preserveElapsed === true && journeyStartedAt) {
+            journeyElapsedMs = Math.min(JOURNEY_DWELL_MS, journeyElapsedMs + Math.max(0, Date.now() - journeyStartedAt));
+          }
+          window.clearTimeout(journeyTimer);
+        }
+        journeyTimer = null;
+        journeyStartedAt = 0;
+        if (options.preserveElapsed !== true) journeyElapsedMs = 0;
+      }
+      function clearJourneyPresentation(options) {
+        options = options || {};
+        removeJourneyPulse();
+        svg.removeAttribute('data-route-journey');
+        panel.removeAttribute('data-route-journey');
+        nodes().forEach(function (node) {
+          node.removeAttribute('data-route-journey-state');
+          node.removeAttribute('data-route-journey-current');
+        });
+        edges().forEach(function (edge) {
+          edge.removeAttribute('data-route-journey-state');
+          edge.removeAttribute('data-route-journey-current');
+        });
+        Array.prototype.forEach.call(path.querySelectorAll('[data-route-journey-index]'), function (button, index) {
+          button.removeAttribute('data-route-journey-state');
+          button.removeAttribute('aria-current');
+          button.setAttribute('tabindex', index === 0 ? '0' : '-1');
+        });
+        if (options.keepControls !== true) journeyControls.hidden = true;
+        journeyControls.setAttribute('data-playing', 'false');
+      }
+      function resetJourneyState() {
+        stopJourneyTimer();
+        journeyPlaying = false;
+        journeyComplete = false;
+        journeyIndex = -1;
+        clearJourneyPresentation();
+      }
+      function cleanSvgState() {
+        resetJourneyState();
+        svg.removeAttribute('data-route-picking');
+        svg.removeAttribute('data-route-active');
+        removeOverlay();
+        nodes().forEach(function (node) {
+          node.removeAttribute('data-route-match');
+          node.removeAttribute('data-route-start');
+          node.removeAttribute('data-route-end');
+          node.removeAttribute('data-route-step');
+          node.removeAttribute('data-route-candidate');
+          node.style.removeProperty('--route-step');
+        });
+        edges().forEach(function (edge) {
+          edge.removeAttribute('data-route-match');
+          edge.removeAttribute('data-route-step');
+          edge.style.removeProperty('--route-step');
+        });
+        panel.removeAttribute('data-route-dock');
+      }
+      function replaceRouteHash(value) {
+        try {
+          history.replaceState(null, '', location.pathname + location.search + (value ? '#route=' + value : ''));
+        } catch (_) {}
+      }
+      function renderPlaceholder(copy) {
+        path.textContent = '';
+        var placeholder = document.createElement('span');
+        placeholder.className = 'route-probe-placeholder';
+        placeholder.textContent = copy;
+        path.appendChild(placeholder);
+      }
+      function renderPath(ids, options) {
+        options = options || {};
+        var byId = nodesById();
+        path.textContent = '';
+        ids.forEach(function (id, index) {
+          if (index) {
+            var arrow = document.createElement('span');
+            arrow.className = 'route-probe-arrow';
+            arrow.setAttribute('aria-hidden', 'true');
+            arrow.textContent = '\u2192';
+            path.appendChild(arrow);
+          }
+          var item = document.createElement(options.interactive === true ? 'button' : 'span');
+          if (options.interactive === true) {
+            item.type = 'button';
+            item.setAttribute('data-route-journey-index', String(index));
+            item.setAttribute('data-route-node-id', id);
+            item.setAttribute('tabindex', index === 0 ? '0' : '-1');
+            item.setAttribute('aria-label', 'Route position ' + (index + 1) + ' of ' + ids.length + ': ' + nodeLabel(byId[id], id));
+          }
+          item.className = 'route-probe-node';
+          item.textContent = nodeLabel(byId[id], id);
+          item.title = nodeLabel(byId[id], id) + ' · ' + id;
+          if (index === 0) item.setAttribute('data-endpoint', 'start');
+          if (index === ids.length - 1 && ids.length > 1) item.setAttribute('data-endpoint', 'end');
+          path.appendChild(item);
+        });
+      }
+      function setTrigger(active) {
+        trigger.setAttribute('aria-pressed', active ? 'true' : 'false');
+        trigger.setAttribute('aria-label', active ? 'Clear traced route' : 'Trace a directed route');
+      }
+      function clear(options) {
+        options = options || {};
+        var wasActive = mode !== 'idle';
+        if (Archify.finder && Archify.finder.isOpen() && typeof Archify.finder.context === 'function' && Archify.finder.context().indexOf('route-') === 0) {
+          Archify.finder.close({ restoreFocus: false });
+        }
+        mode = 'idle';
+        startId = null;
+        endId = null;
+        activeNodeIds = [];
+        activeEdges = [];
+        cleanSvgState();
+        panel.hidden = true;
+        panel.setAttribute('data-state', 'idle');
+        panel.removeAttribute('data-finder-open');
+        title.textContent = 'Choose a start node';
+        renderPlaceholder('Pick two semantic nodes on the diagram');
+        status.textContent = 'Choose the source, then the destination. Direction matters.';
+        findBtn.hidden = true;
+        findBtn.textContent = 'Find start';
+        findBtn.setAttribute('aria-label', 'Find a route start');
+        copyBtn.hidden = true;
+        copyBtn.textContent = 'Copy link';
+        if (Archify.exportMenu && typeof Archify.exportMenu.syncRouteShare === 'function') Archify.exportMenu.syncRouteShare();
+        setTrigger(false);
+        if (wasActive && options.preserveView !== true && Archify.view && typeof Archify.view.reset === 'function') {
+          Archify.view.reset({ automatic: true });
+        }
+        if (options.updateUrl !== false) replaceRouteHash('');
+        if (options.restoreFocus === true) trigger.focus();
+      }
+      function outgoingByNode() {
+        var byId = nodesById();
+        var outgoing = {};
+        edges().forEach(function (edge) {
+          var from = edge.getAttribute('data-edge-from');
+          var to = edge.getAttribute('data-edge-to');
+          if (!byId[from] || !byId[to] || from === to) return;
+          if (!outgoing[from]) outgoing[from] = [];
+          outgoing[from].push({ edge: edge, to: to });
+        });
+        return outgoing;
+      }
+      function reachableFrom(source) {
+        var outgoing = outgoingByNode();
+        var reached = {};
+        var queue = [source];
+        reached[source] = true;
+        for (var cursor = 0; cursor < queue.length; cursor += 1) {
+          var links = outgoing[queue[cursor]] || [];
+          links.forEach(function (link) {
+            if (reached[link.to]) return;
+            reached[link.to] = true;
+            queue.push(link.to);
+          });
+        }
+        return reached;
+      }
+      function hopDistancesFrom(source) {
+        var outgoing = outgoingByNode();
+        var distances = {};
+        var queue = [source];
+        distances[source] = 0;
+        for (var cursor = 0; cursor < queue.length; cursor += 1) {
+          var links = outgoing[queue[cursor]] || [];
+          links.forEach(function (link) {
+            if (Object.prototype.hasOwnProperty.call(distances, link.to)) return;
+            distances[link.to] = distances[queue[cursor]] + 1;
+            queue.push(link.to);
+          });
+        }
+        return distances;
+      }
+      function shortestDirectedPath(source, target) {
+        if (source === target) return null;
+        var outgoing = outgoingByNode();
+        var previous = {};
+        var queue = [source];
+        previous[source] = null;
+        for (var cursor = 0; cursor < queue.length && !Object.prototype.hasOwnProperty.call(previous, target); cursor += 1) {
+          var links = outgoing[queue[cursor]] || [];
+          links.some(function (link) {
+            if (Object.prototype.hasOwnProperty.call(previous, link.to)) return false;
+            previous[link.to] = { from: queue[cursor], edge: link.edge };
+            queue.push(link.to);
+            return link.to === target;
+          });
+        }
+        if (!Object.prototype.hasOwnProperty.call(previous, target)) return null;
+        var nodeIds = [target];
+        var routeEdges = [];
+        var current = target;
+        while (current !== source) {
+          var step = previous[current];
+          if (!step) return null;
+          routeEdges.unshift(step.edge);
+          nodeIds.unshift(step.from);
+          current = step.from;
+        }
+        return { nodes: nodeIds, edges: routeEdges };
+      }
+      function traceGeometry(shape, step) {
+        var clone = shape.cloneNode(false);
+        clone.removeAttribute('id');
+        clone.removeAttribute('class');
+        clone.removeAttribute('style');
+        clone.removeAttribute('marker-start');
+        clone.removeAttribute('marker-mid');
+        clone.removeAttribute('marker-end');
+        clone.removeAttribute('role');
+        clone.removeAttribute('aria-label');
+        clone.removeAttribute('aria-labelledby');
+        clone.removeAttribute('data-animate');
+        clone.removeAttribute('data-edge-from');
+        clone.removeAttribute('data-edge-to');
+        clone.removeAttribute('data-edge-key');
+        clone.removeAttribute('data-edge-id');
+        clone.removeAttribute('data-edge-label');
+        clone.removeAttribute('data-route-match');
+        clone.removeAttribute('data-route-step');
+        clone.setAttribute('class', 'route-probe-flow');
+        clone.setAttribute('pathLength', '1');
+        clone.style.setProperty('--route-step', String(step));
+        return clone;
+      }
+      function renderOverlay(routeEdges) {
+        removeOverlay();
+        if (!routeEdges.length) return;
+        var overlay = document.createElementNS(namespace, 'g');
+        overlay.setAttribute('class', 'route-probe-overlay');
+        overlay.setAttribute('data-route-probe-overlay', '');
+        overlay.setAttribute('aria-hidden', 'true');
+        routeEdges.forEach(function (edge, step) {
+          var wrapper = document.createElementNS(namespace, 'g');
+          if (edge.hasAttribute('transform')) wrapper.setAttribute('transform', edge.getAttribute('transform'));
+          edgeShapes(edge).forEach(function (shape) { wrapper.appendChild(traceGeometry(shape, step)); });
+          if (wrapper.childNodes.length) overlay.appendChild(wrapper);
+        });
+        var firstNode = svg.querySelector('[data-node-id]');
+        if (firstNode) svg.insertBefore(overlay, firstNode);
+        else svg.appendChild(overlay);
+      }
+      function journeyButtons() {
+        return Array.prototype.slice.call(path.querySelectorAll('[data-route-journey-index]'));
+      }
+      function journeyMotionAllowed() {
+        return html.getAttribute('data-embed') !== 'true' &&
+          !document.hidden &&
+          Archify.motionGovernor &&
+          Archify.motionGovernor.capable === true &&
+          !Archify.motionGovernor.isPaused();
+      }
+      function routeOverviewStatus() {
+        return activeNodeIds.length + ' nodes · ' + activeEdges.length + ' directed hop' + (activeEdges.length === 1 ? '' : 's') + ' · shortest authored route';
+      }
+      function centerJourneyButton(button) {
+        if (!button) return;
+        var target = button.offsetLeft - Math.max(0, (path.clientWidth - button.offsetWidth) / 2);
+        path.scrollLeft = Math.max(0, target);
+      }
+      function focusJourneyButton(index) {
+        var buttons = journeyButtons();
+        if (!buttons.length) return false;
+        var next = Math.max(0, Math.min(buttons.length - 1, index));
+        buttons.forEach(function (button, buttonIndex) {
+          button.setAttribute('tabindex', buttonIndex === next ? '0' : '-1');
+        });
+        try { buttons[next].focus({ preventScroll: true }); } catch (_) { buttons[next].focus(); }
+        centerJourneyButton(buttons[next]);
+        return true;
+      }
+      function renderJourneyControls() {
+        var hasRoute = mode === 'result' && activeNodeIds.length > 1;
+        var canPlay = hasRoute && journeyMotionAllowed();
+        journeyControls.hidden = !hasRoute;
+        journeyControls.setAttribute('data-playing', journeyPlaying ? 'true' : 'false');
+        journeyPrevBtn.disabled = !hasRoute || journeyIndex <= 0;
+        journeyNextBtn.disabled = !hasRoute || journeyIndex >= activeNodeIds.length - 1;
+        journeyOverviewBtn.disabled = !hasRoute || journeyIndex < 0;
+        journeyPlayBtn.disabled = !canPlay;
+        journeyPlayBtn.setAttribute('aria-pressed', journeyPlaying ? 'true' : 'false');
+        if (journeyPlaying) {
+          journeyPlayIcon.textContent = '\u275a\u275a';
+          journeyPlayLabel.textContent = 'Pause';
+          journeyPlayBtn.setAttribute('aria-label', 'Pause route journey');
+          journeyPlayBtn.title = 'Pause route journey';
+        } else if (journeyComplete || journeyIndex === activeNodeIds.length - 1) {
+          journeyPlayIcon.textContent = '\u21bb';
+          journeyPlayLabel.textContent = 'Replay';
+          journeyPlayBtn.setAttribute('aria-label', 'Replay route journey');
+          journeyPlayBtn.title = canPlay ? 'Replay route journey' : 'Automatic journey requires Live motion';
+        } else {
+          journeyPlayIcon.textContent = '\u25b6';
+          journeyPlayLabel.textContent = 'Journey';
+          journeyPlayBtn.setAttribute('aria-label', 'Play route journey');
+          journeyPlayBtn.title = canPlay ? 'Play route journey' : 'Automatic journey requires Live motion';
+        }
+      }
+      function journeyGeometry(shape) {
+        var clone = shape.cloneNode(false);
+        clone.removeAttribute('id');
+        clone.removeAttribute('class');
+        clone.removeAttribute('style');
+        clone.removeAttribute('marker-start');
+        clone.removeAttribute('marker-mid');
+        clone.removeAttribute('marker-end');
+        clone.removeAttribute('role');
+        clone.removeAttribute('aria-label');
+        clone.removeAttribute('aria-labelledby');
+        clone.removeAttribute('data-animate');
+        clone.removeAttribute('data-edge-from');
+        clone.removeAttribute('data-edge-to');
+        clone.removeAttribute('data-edge-key');
+        clone.removeAttribute('data-edge-id');
+        clone.removeAttribute('data-edge-label');
+        clone.removeAttribute('data-route-match');
+        clone.removeAttribute('data-route-step');
+        clone.removeAttribute('data-route-journey-state');
+        clone.removeAttribute('data-route-journey-current');
+        clone.setAttribute('class', 'route-journey-flow');
+        clone.setAttribute('pathLength', '1');
+        return clone;
+      }
+      function renderJourneyPulse(edge) {
+        removeJourneyPulse();
+        if (!edge || !journeyMotionAllowed()) return false;
+        var overlay = document.createElementNS(namespace, 'g');
+        overlay.setAttribute('class', 'route-journey-overlay');
+        overlay.setAttribute('data-route-journey-overlay', '');
+        overlay.setAttribute('aria-hidden', 'true');
+        var wrapper = document.createElementNS(namespace, 'g');
+        if (edge.hasAttribute('transform')) wrapper.setAttribute('transform', edge.getAttribute('transform'));
+        edgeShapes(edge).forEach(function (shape) { wrapper.appendChild(journeyGeometry(shape)); });
+        if (!wrapper.childNodes.length) return false;
+        overlay.appendChild(wrapper);
+        var firstNode = svg.querySelector('[data-node-id]');
+        if (firstNode) svg.insertBefore(overlay, firstNode);
+        else svg.appendChild(overlay);
+        if (Archify.motionGovernor && Archify.motionGovernor.capable) {
+          var token = 0;
+          token = Archify.motionGovernor.claim('route', function () {
+            if (journeyOwnerToken === token) journeyOwnerToken = 0;
+            removeJourneyPulse({ release: false });
+          });
+          journeyOwnerToken = token;
+        }
+        overlay.addEventListener('animationend', function () {
+          if (overlay.isConnected) removeJourneyPulse();
+        }, { once: true });
+        window.setTimeout(function () {
+          if (overlay.isConnected) removeJourneyPulse();
+        }, 860);
+        return true;
+      }
+      function applyJourneyState(index, options) {
+        options = options || {};
+        if (mode !== 'result' || !activeNodeIds.length) return false;
+        var byId = nodesById();
+        journeyIndex = Math.max(0, Math.min(activeNodeIds.length - 1, index));
+        removeJourneyPulse();
+        svg.setAttribute('data-route-journey', (journeyIndex + 1) + '/' + activeNodeIds.length);
+        panel.setAttribute('data-route-journey', String(journeyIndex));
+        activeNodeIds.forEach(function (id, step) {
+          var node = byId[id];
+          if (!node) return;
+          var state = step < journeyIndex ? 'past' : (step === journeyIndex ? 'current' : 'future');
+          node.setAttribute('data-route-journey-state', state);
+          if (step === journeyIndex) node.setAttribute('data-route-journey-current', '');
+          else node.removeAttribute('data-route-journey-current');
+        });
+        activeEdges.forEach(function (edge, step) {
+          var destination = step + 1;
+          var state = destination < journeyIndex ? 'past' : (destination === journeyIndex ? 'current' : 'future');
+          edge.setAttribute('data-route-journey-state', state);
+          if (destination === journeyIndex) edge.setAttribute('data-route-journey-current', '');
+          else edge.removeAttribute('data-route-journey-current');
+        });
+        var buttons = journeyButtons();
+        buttons.forEach(function (button, step) {
+          var state = step < journeyIndex ? 'past' : (step === journeyIndex ? 'current' : 'future');
+          button.setAttribute('data-route-journey-state', state);
+          button.setAttribute('tabindex', step === journeyIndex ? '0' : '-1');
+          if (step === journeyIndex) button.setAttribute('aria-current', 'step');
+          else button.removeAttribute('aria-current');
+        });
+        if (options.center !== false) centerJourneyButton(buttons[journeyIndex]);
+        var phase = journeyPlaying ? 'Playing' : (journeyComplete ? 'Complete' : 'Inspecting');
+        status.textContent = 'Step ' + (journeyIndex + 1) + ' of ' + activeNodeIds.length + ' · ' + phase + ' · ' + nodeLabel(byId[activeNodeIds[journeyIndex]], activeNodeIds[journeyIndex]);
+        if (options.pulse === true && journeyIndex > 0) renderJourneyPulse(activeEdges[journeyIndex - 1]);
+        if (options.reveal !== false && Archify.view && typeof Archify.view.reveal === 'function') {
+          Archify.view.reveal(activeNodeIds.slice(Math.max(0, journeyIndex - 1), Math.min(activeNodeIds.length, journeyIndex + 2)), {
+            includeNeighbors: false,
+            reason: 'route-journey',
+            maxScale: 1.65,
+            padding: 64,
+            duration: 360,
+            instant: !journeyMotionAllowed()
+          });
+        }
+        renderJourneyControls();
+        requestDocking();
+        return true;
+      }
+      function pauseJourney(options) {
+        options = options || {};
+        if (!journeyPlaying && options.complete !== true) {
+          renderJourneyControls();
+          return false;
+        }
+        stopJourneyTimer({ preserveElapsed: options.complete !== true && options.preserveElapsed !== false });
+        journeyPlaying = false;
+        journeyComplete = options.complete === true;
+        if (journeyComplete) journeyElapsedMs = 0;
+        removeJourneyPulse();
+        if (journeyIndex >= 0) applyJourneyState(journeyIndex, { center: false, pulse: false, reveal: false });
+        else renderJourneyControls();
+        return true;
+      }
+      function selectJourneyIndex(index) {
+        if (mode !== 'result') return false;
+        stopJourneyTimer();
+        journeyPlaying = false;
+        journeyComplete = false;
+        return applyJourneyState(index, { pulse: true, reveal: true });
+      }
+      function showJourneyOverview(options) {
+        options = options || {};
+        if (mode !== 'result') return false;
+        stopJourneyTimer();
+        journeyPlaying = false;
+        journeyComplete = false;
+        journeyIndex = -1;
+        clearJourneyPresentation({ keepControls: true });
+        status.textContent = routeOverviewStatus();
+        renderJourneyControls();
+        if (options.reveal !== false && Archify.view && typeof Archify.view.reveal === 'function') {
+          Archify.view.reveal(activeNodeIds, { includeNeighbors: false, reason: 'route', instant: !journeyMotionAllowed() });
+        }
+        requestDocking();
+        return true;
+      }
+      function scheduleJourney() {
+        if (!journeyPlaying || !journeyMotionAllowed()) {
+          pauseJourney({ preserveElapsed: true });
+          return false;
+        }
+        var generation = ++journeyGeneration;
+        var remaining = Math.max(0, JOURNEY_DWELL_MS - journeyElapsedMs);
+        journeyStartedAt = Date.now();
+        journeyTimer = window.setTimeout(function () {
+          if (generation !== journeyGeneration || !journeyPlaying) return;
+          journeyTimer = null;
+          journeyStartedAt = 0;
+          journeyElapsedMs = 0;
+          if (journeyIndex >= activeNodeIds.length - 1) {
+            pauseJourney({ complete: true, preserveElapsed: false });
+            return;
+          }
+          applyJourneyState(journeyIndex + 1, { pulse: true, reveal: true });
+          // Camera and motion-owner handoff are allowed to synchronously
+          // settle the previous step. The new step always starts with a fresh
+          // dwell; never carry cleanup time into the next scheduler lease.
+          journeyElapsedMs = 0;
+          journeyStartedAt = 0;
+          scheduleJourney();
+        }, remaining);
+        return true;
+      }
+      function playJourney() {
+        if (mode !== 'result' || activeNodeIds.length < 2 || !journeyMotionAllowed()) {
+          renderJourneyControls();
+          return false;
+        }
+        if (journeyPlaying) return true;
+        if (journeyComplete || journeyIndex >= activeNodeIds.length - 1) {
+          journeyIndex = -1;
+          journeyElapsedMs = 0;
+          journeyComplete = false;
+        }
+        journeyPlaying = true;
+        if (journeyIndex < 0) applyJourneyState(0, { pulse: false, reveal: true });
+        else applyJourneyState(journeyIndex, { center: false, pulse: false, reveal: false });
+        scheduleJourney();
+        return true;
+      }
+      function toggleJourney() {
+        return journeyPlaying ? pauseJourney({ preserveElapsed: true }) : playJourney();
+      }
+      function previousJourney() {
+        return selectJourneyIndex(Math.max(0, journeyIndex < 0 ? 0 : journeyIndex - 1));
+      }
+      function nextJourney() {
+        return selectJourneyIndex(Math.min(activeNodeIds.length - 1, journeyIndex + 1));
+      }
+      function overlapArea(a, b) {
+        var width = Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left));
+        var height = Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+        return width * height;
+      }
+      function updateDocking() {
+        if (panel.hidden) {
+          panel.removeAttribute('data-route-dock');
+          return;
+        }
+        var containerRect = container.getBoundingClientRect();
+        var width = panel.offsetWidth;
+        var height = panel.offsetHeight;
+        if (!width || !height) return;
+        var currentRect = panel.getBoundingClientRect();
+        var left = currentRect.left;
+        var topCandidate = {
+          left: left,
+          right: left + width,
+          top: containerRect.top + 8,
+          bottom: containerRect.top + 8 + height
+        };
+        var nav = container.querySelector('.diagram-nav');
+        var navRect = nav ? nav.getBoundingClientRect() : null;
+        var bottom = navRect ? navRect.top - 9 : containerRect.bottom - 8;
+        var bottomCandidate = {
+          left: left,
+          right: left + width,
+          top: bottom - height,
+          bottom: bottom
+        };
+        var byId = nodesById();
+        var relevant = activeNodeIds.length ? activeNodeIds : (startId ? [startId] : []);
+        var blockers = relevant.map(function (id) { return byId[id]; }).filter(Boolean).map(function (node) {
+          return node.getBoundingClientRect();
+        });
+        function score(candidate) {
+          var value = blockers.reduce(function (sum, rect) { return sum + overlapArea(candidate, rect); }, 0);
+          if (navRect) value += overlapArea(candidate, navRect) * 4;
+          if (candidate.top < containerRect.top || candidate.bottom > containerRect.bottom) value += 1000000;
+          return value;
+        }
+        if (score(topCandidate) <= score(bottomCandidate)) panel.setAttribute('data-route-dock', 'top');
+        else panel.setAttribute('data-route-dock', 'bottom');
+      }
+      function requestDocking() {
+        requestAnimationFrame(updateDocking);
+        window.setTimeout(updateDocking, 120);
+        window.setTimeout(updateDocking, 560);
+      }
+      function chooseStart(id) {
+        var byId = nodesById();
+        if (!byId[id]) return false;
+        cleanSvgState();
+        startId = id;
+        endId = null;
+        mode = 'target';
+        var reached = reachableFrom(id);
+        byId[id].setAttribute('data-route-start', '');
+        byId[id].setAttribute('data-route-match', '');
+        Object.keys(reached).forEach(function (candidateId) {
+          if (candidateId !== id && byId[candidateId]) byId[candidateId].setAttribute('data-route-candidate', '');
+        });
+        svg.setAttribute('data-route-picking', 'target');
+        panel.setAttribute('data-state', 'target');
+        title.textContent = 'Choose a destination from ' + nodeLabel(byId[id], id);
+        renderPath([id]);
+        var count = Math.max(0, Object.keys(reached).length - 1);
+        status.textContent = count
+          ? count + ' directed destination' + (count === 1 ? '' : 's') + ' available. Pick a highlighted node.'
+          : 'No outgoing route starts here. Clear and choose another source.';
+        findBtn.hidden = false;
+        findBtn.textContent = 'Find target';
+        findBtn.setAttribute('aria-label', 'Find a reachable route destination');
+        requestDocking();
+        return true;
+      }
+      function showResult(result, options) {
+        options = options || {};
+        var byId = nodesById();
+        cleanSvgState();
+        mode = 'result';
+        startId = result.nodes[0];
+        endId = result.nodes[result.nodes.length - 1];
+        activeNodeIds = result.nodes.slice();
+        activeEdges = result.edges.slice();
+        result.nodes.forEach(function (id, step) {
+          var node = byId[id];
+          if (!node) return;
+          node.setAttribute('data-route-match', '');
+          node.setAttribute('data-route-step', String(step));
+          node.style.setProperty('--route-step', String(step));
+          if (step === 0) node.setAttribute('data-route-start', '');
+          if (step === result.nodes.length - 1) node.setAttribute('data-route-end', '');
+        });
+        result.edges.forEach(function (edge, step) {
+          edge.setAttribute('data-route-match', '');
+          edge.setAttribute('data-route-step', String(step));
+          edge.style.setProperty('--route-step', String(step));
+        });
+        svg.setAttribute('data-route-active', startId + '~' + endId);
+        renderOverlay(result.edges);
+        renderPath(result.nodes, { interactive: true });
+        panel.setAttribute('data-state', 'result');
+        panel.hidden = false;
+        title.textContent = nodeLabel(byId[startId], startId) + ' to ' + nodeLabel(byId[endId], endId);
+        findBtn.hidden = true;
+        copyBtn.hidden = false;
+        setTrigger(true);
+        if (Archify.exportMenu && typeof Archify.exportMenu.syncRouteShare === 'function') Archify.exportMenu.syncRouteShare();
+        if (options.updateUrl !== false) {
+          replaceRouteHash(encodeURIComponent(startId) + '~' + encodeURIComponent(endId));
+        }
+        showJourneyOverview({ reveal: false });
+        if (Archify.view && typeof Archify.view.reveal === 'function') {
+          Archify.view.reveal(result.nodes, { includeNeighbors: false, reason: 'route' });
+        }
+        return true;
+      }
+      function choose(id, options) {
+        options = options || {};
+        var byId = nodesById();
+        if (!byId[id]) return false;
+        if (mode === 'source') return chooseStart(id);
+        if (mode !== 'target') return false;
+        if (id === startId) {
+          panel.setAttribute('data-state', 'error');
+          title.textContent = 'Choose a different destination';
+          status.textContent = 'A route needs two distinct semantic nodes.';
+          return false;
+        }
+        var result = shortestDirectedPath(startId, id);
+        if (!result) {
+          panel.setAttribute('data-state', 'error');
+          title.textContent = 'No directed route to ' + nodeLabel(byId[id], id);
+          status.textContent = nodeLabel(byId[id], id) + ' is not reachable from ' + nodeLabel(byId[startId], startId) + '. Pick a highlighted destination.';
+          return false;
+        }
+        return showResult(result, options);
+      }
+      function begin(options) {
+        options = options || {};
+        if (html.getAttribute('data-embed') === 'true') return false;
+        if (Archify.semanticLens && typeof Archify.semanticLens.clearPreview === 'function') Archify.semanticLens.clearPreview();
+        if (Archify.semanticLens && Archify.semanticLens.active()) {
+          Archify.semanticLens.clear({ updateUrl: false, preserveView: true, closePanel: true });
+        }
+        var focused = options.source || (Archify.focus && typeof Archify.focus.active === 'function' ? Archify.focus.active() : null);
+        if (Array.isArray(focused)) focused = null;
+        clear({ updateUrl: false, preserveView: true, restoreFocus: false });
+        if (Archify.intentTrace && typeof Archify.intentTrace.clear === 'function') Archify.intentTrace.clear({ announce: false });
+        if (Archify.guidedViews && typeof Archify.guidedViews.showAll === 'function') {
+          Archify.guidedViews.showAll({ clearFocus: false, updateUrl: false });
+        }
+        if (Archify.focus && typeof Archify.focus.clear === 'function') {
+          Archify.focus.clear({ updateUrl: false, preserveView: true });
+        }
+        if (Archify.finder && Archify.finder.isOpen()) Archify.finder.close({ restoreFocus: false });
+        if (Archify.radar && Archify.radar.isOpen()) Archify.radar.close({ restoreFocus: false });
+        mode = 'source';
+        panel.hidden = false;
+        panel.setAttribute('data-state', 'source');
+        svg.setAttribute('data-route-picking', 'source');
+        title.textContent = 'Choose a start node';
+        renderPlaceholder('Pick a semantic node on the diagram');
+        status.textContent = 'Select the source. The next step will reveal only directed destinations.';
+        findBtn.hidden = false;
+        findBtn.textContent = 'Find start';
+        findBtn.setAttribute('aria-label', 'Find a route start');
+        copyBtn.hidden = true;
+        setTrigger(true);
+        if (focused && nodesById()[focused]) chooseStart(focused);
+        if (options.focusNode === true && !focused) {
+          var first = nodes()[0];
+          if (first) {
+            try { first.focus({ preventScroll: true }); } catch (_) { try { first.focus(); } catch (_) {} }
+          }
+        }
+        return true;
+      }
+      function toggle(options) {
+        if (mode !== 'idle') {
+          clear({ restoreFocus: true });
+          return false;
+        }
+        return begin(options);
+      }
+      function finderContext() {
+        var byId = nodesById();
+        if (mode === 'source') {
+          var outgoing = outgoingByNode();
+          var sourceIds = nodes().map(function (node) { return node.getAttribute('data-node-id'); }).filter(function (id) {
+            return outgoing[id] && outgoing[id].length;
+          });
+          var sourceBadges = {};
+          sourceIds.forEach(function (id) { sourceBadges[id] = 'start'; });
+          return {
+            kind: 'route-source',
+            title: 'Choose route start',
+            placeholder: 'Search route sources',
+            empty: 'No matching route sources',
+            resultsLabel: 'Nodes that can start a route',
+            availableNoun: 'route sources',
+            allowedIds: sourceIds,
+            badges: sourceBadges
+          };
+        }
+        if (mode === 'target' && startId && byId[startId]) {
+          var distances = hopDistancesFrom(startId);
+          var targetIds = Object.keys(distances).filter(function (id) { return id !== startId && byId[id]; });
+          var targetBadges = {};
+          targetIds.forEach(function (id) {
+            targetBadges[id] = distances[id] + ' hop' + (distances[id] === 1 ? '' : 's');
+          });
+          return {
+            kind: 'route-target',
+            title: 'Destination from ' + nodeLabel(byId[startId], startId),
+            placeholder: 'Search reachable destinations',
+            empty: 'No matching reachable destinations',
+            resultsLabel: 'Reachable route destinations',
+            availableNoun: 'reachable destinations',
+            allowedIds: targetIds,
+            badges: targetBadges
+          };
+        }
+        return null;
+      }
+      function finderOpening() {
+        panel.setAttribute('data-finder-open', 'true');
+      }
+      function finderClosed(options) {
+        options = options || {};
+        panel.removeAttribute('data-finder-open');
+        requestDocking();
+        if (options.restoreFocus === true && !findBtn.hidden) findBtn.focus();
+      }
+      function openFinder() {
+        var context = finderContext();
+        if (!context || !Archify.finder) return false;
+        return Archify.finder.open({ context: context });
+      }
+      function fallbackCopy(value) {
+        var field = document.createElement('textarea');
+        field.value = value;
+        field.setAttribute('readonly', '');
+        field.style.position = 'fixed';
+        field.style.opacity = '0';
+        document.body.appendChild(field);
+        field.select();
+        var copied = false;
+        try { copied = document.execCommand('copy'); } catch (_) {}
+        field.remove();
+        return copied;
+      }
+      function copyLink() {
+        if (mode !== 'result') return Promise.resolve(false);
+        var value = location.href.replace(/#.*$/, '') + '#route=' + encodeURIComponent(startId) + '~' + encodeURIComponent(endId);
+        var copy = navigator.clipboard && typeof navigator.clipboard.writeText === 'function'
+          ? navigator.clipboard.writeText(value).then(function () { return true; }).catch(function () { return fallbackCopy(value); })
+          : Promise.resolve(fallbackCopy(value));
+        return copy.then(function (copied) {
+          copyBtn.textContent = copied ? 'Copied' : 'Copy failed';
+          copyBtn.setAttribute('aria-label', copied ? 'Traced route link copied' : 'Could not copy traced route link');
+          window.setTimeout(function () {
+            copyBtn.textContent = 'Copy link';
+            copyBtn.setAttribute('aria-label', 'Copy link to traced route');
+          }, 1600);
+          return copied;
+        });
+      }
+      function interceptSelection(event) {
+        if (mode !== 'source' && mode !== 'target') return;
+        if (container.getAttribute('data-just-panned') === 'true') return;
+        var node = event.target.closest('[data-node-id]');
+        if (!node) return;
+        if (event.type === 'keydown' && event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        choose(node.getAttribute('data-node-id'));
+      }
+      function syncFromHash() {
+        try {
+          var params = new URLSearchParams(location.hash.replace(/^#/, ''));
+          var route = params.get('route');
+          if (!route) {
+            if (mode !== 'idle') clear({ updateUrl: false, restoreFocus: false });
+            return;
+          }
+          var parts = route.split('~');
+          if (parts.length !== 2) return;
+          var byId = nodesById();
+          if (!byId[parts[0]] || !byId[parts[1]]) return;
+          begin({ source: parts[0], focusNode: false });
+          choose(parts[1], { updateUrl: false });
+        } catch (_) {}
+      }
+      function escapeRoute(options) {
+        options = options || {};
+        if (journeyPlaying) {
+          pauseJourney({ preserveElapsed: true });
+          if (options.restoreFocus === true) journeyPlayBtn.focus();
+          return 'paused';
+        }
+        if (journeyIndex >= 0) {
+          showJourneyOverview({ reveal: true });
+          if (options.restoreFocus === true) journeyOverviewBtn.focus();
+          return 'overview';
+        }
+        clear({ restoreFocus: options.restoreFocus === true });
+        return 'cleared';
+      }
+      function syncJourneyMotion() {
+        if (journeyPlaying && !journeyMotionAllowed()) pauseJourney({ preserveElapsed: true });
+        renderJourneyControls();
+        return journeyMotionAllowed();
+      }
+
+      trigger.addEventListener('click', function () { toggle({ focusNode: false }); });
+      findBtn.addEventListener('click', openFinder);
+      clearBtn.addEventListener('click', function () { clear({ restoreFocus: true }); });
+      copyBtn.addEventListener('click', copyLink);
+      journeyPrevBtn.addEventListener('click', previousJourney);
+      journeyPlayBtn.addEventListener('click', toggleJourney);
+      journeyNextBtn.addEventListener('click', nextJourney);
+      journeyOverviewBtn.addEventListener('click', function () { showJourneyOverview({ reveal: true }); });
+      path.addEventListener('click', function (event) {
+        var button = event.target.closest('[data-route-journey-index]');
+        if (!button) return;
+        selectJourneyIndex(Number(button.getAttribute('data-route-journey-index')));
+      });
+      path.addEventListener('focusin', function (event) {
+        if (journeyPlaying && event.target.closest('[data-route-journey-index]')) pauseJourney({ preserveElapsed: true });
+      });
+      path.addEventListener('keydown', function (event) {
+        var button = event.target.closest('[data-route-journey-index]');
+        if (!button) return;
+        var index = Number(button.getAttribute('data-route-journey-index'));
+        var next = null;
+        if (event.key === 'ArrowRight') next = Math.min(activeNodeIds.length - 1, index + 1);
+        else if (event.key === 'ArrowLeft') next = Math.max(0, index - 1);
+        else if (event.key === 'Home') next = 0;
+        else if (event.key === 'End') next = activeNodeIds.length - 1;
+        if (next !== null) {
+          event.preventDefault();
+          focusJourneyButton(next);
+          return;
+        }
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          selectJourneyIndex(index);
+        }
+      });
+      svg.addEventListener('click', interceptSelection, true);
+      svg.addEventListener('keydown', interceptSelection, true);
+      container.addEventListener('scroll', updateDocking, { passive: true });
+      window.addEventListener('resize', requestDocking);
+      window.addEventListener('beforeprint', function () {
+        if (journeyPlaying) pauseJourney({ preserveElapsed: true, reason: 'print' });
+        else removeJourneyPulse();
+      });
+      window.addEventListener('hashchange', function () { requestAnimationFrame(syncFromHash); });
+      syncFromHash();
+
+      return {
+        begin: begin,
+        choose: choose,
+        clear: clear,
+        toggle: toggle,
+        escape: escapeRoute,
+        copyLink: copyLink,
+        playJourney: playJourney,
+        pauseJourney: pauseJourney,
+        showOverview: showJourneyOverview,
+        selectJourneyIndex: selectJourneyIndex,
+        syncMotion: syncJourneyMotion,
+        isJourneyPlaying: function () { return journeyPlaying; },
+        finderContext: finderContext,
+        finderOpening: finderOpening,
+        finderClosed: finderClosed,
+        openFinder: openFinder,
+        exportSnapshot: exportSnapshot,
+        active: function () { return mode === 'idle' ? null : mode; },
+        result: function () {
+          return mode === 'result'
+            ? { source: startId, target: endId, nodes: activeNodeIds.slice(), hops: activeEdges.length, journey: journeyIndex, playing: journeyPlaying }
+            : null;
+        }
+      };
+    })();
+
+    /* ============================================================
+       Semantic Lens — a counted, viewer-only legend over data-node-kind.
+       One selected kind reveals every authored relationship touching it.
+       Two selected kinds compare only direct cross-kind relationships while
+       preserving the full diagram as a dimmed spatial reference.
+       ============================================================ */
+    Archify.semanticLens = (function () {
+      var html = document.documentElement;
+      var container = document.querySelector('.diagram-container');
+      var svg = container.querySelector(':scope > svg');
+      var trigger = document.getElementById('btn-semantic-lens');
+      var panel = document.getElementById('semantic-lens');
+      var closeBtn = document.getElementById('semantic-lens-close');
+      var kindsRoot = document.getElementById('semantic-lens-kinds');
+      var status = document.getElementById('semantic-lens-status');
+      var copyBtn = document.getElementById('semantic-lens-copy');
+      var clearBtn = document.getElementById('semantic-lens-clear');
+      var legendBridge = svg.querySelector('[data-legend-bridge]');
+      var legendEntries = [];
+      var hoveredLegendEntry = null;
+      var focusedLegendEntry = null;
+      var activeLegendPreview = null;
+      var lensOpener = trigger;
+      var selectedKinds = [];
+      var namespace = 'http://www.w3.org/2000/svg';
+      var finePointerQuery = window.matchMedia ? window.matchMedia('(hover: hover) and (pointer: fine)') : null;
+      var MAX_LENS_FLOW_EDGES = 24;
+
+      function kindLabel(value) {
+        return String(value || 'neutral')
+          .replace(/messagebus/gi, 'message bus')
+          .replace(/[-_]+/g, ' ')
+          .replace(/\b\w/g, function (letter) { return letter.toUpperCase(); });
+      }
+      function nodesById() {
+        var byId = {};
+        Array.prototype.forEach.call(svg.querySelectorAll('[data-node-id][data-node-kind]'), function (node) {
+          var id = node.getAttribute('data-node-id');
+          if (id && !byId[id]) byId[id] = node;
+        });
+        return byId;
+      }
+      function collectKinds() {
+        var kinds = {};
+        var byId = nodesById();
+        Object.keys(byId).forEach(function (id) {
+          var node = byId[id];
+          var value = node.getAttribute('data-node-kind') || 'neutral';
+          var kind = kinds[value] || (kinds[value] = { id: value, label: kindLabel(value), nodes: [] });
+          kind.nodes.push(node);
+        });
+        return Object.keys(kinds).map(function (key) { return kinds[key]; }).sort(function (a, b) {
+          return b.nodes.length - a.nodes.length || a.label.localeCompare(b.label);
+        });
+      }
+      function edgeGroups() {
+        var groups = {};
+        Array.prototype.forEach.call(svg.querySelectorAll('[data-edge-from][data-edge-to]'), function (edge) {
+          var from = edge.getAttribute('data-edge-from');
+          var to = edge.getAttribute('data-edge-to');
+          var key = edge.getAttribute('data-edge-key') || [from, to, edge.getAttribute('data-edge-label') || ''].join('\u0000');
+          if (!groups[key]) groups[key] = { key: key, from: from, to: to, members: [] };
+          groups[key].members.push(edge);
+        });
+        return Object.keys(groups).map(function (key) { return groups[key]; });
+      }
+      function edgeShapes(edge) {
+        if (!edge) return [];
+        if (/^(path|line|polyline)$/i.test(edge.tagName || '')) return [edge];
+        return Array.prototype.slice.call(edge.querySelectorAll('path, line, polyline'));
+      }
+      function legendSourceBounds(entry) {
+        var bounds = null;
+        Array.prototype.forEach.call(entry.children, function (child) {
+          if (child.hasAttribute('data-legend-bridge-runtime')) return;
+          var box;
+          try { box = child.getBBox(); } catch (_) { return; }
+          if (!box || !Number.isFinite(box.x) || !Number.isFinite(box.y)) return;
+          var next = { left: box.x, top: box.y, right: box.x + box.width, bottom: box.y + box.height };
+          if (!bounds) bounds = next;
+          else {
+            bounds.left = Math.min(bounds.left, next.left);
+            bounds.top = Math.min(bounds.top, next.top);
+            bounds.right = Math.max(bounds.right, next.right);
+            bounds.bottom = Math.max(bounds.bottom, next.bottom);
+          }
+        });
+        return bounds;
+      }
+      function layoutLegendEntry(entry) {
+        var bounds = legendSourceBounds(entry);
+        var hit = entry.querySelector('[data-legend-hit]');
+        var badge = entry.querySelector('[data-legend-count-badge]');
+        if (!bounds || !hit || !badge) return false;
+        var count = entry.getAttribute('data-legend-count') || '0';
+        var centerY = (bounds.top + bounds.bottom) / 2;
+        var badgeWidth = Math.max(14, count.length * 5 + 8);
+        var badgeX = bounds.right + 3;
+        var hitX = bounds.left - 5;
+        var hitRight = badgeX + badgeWidth + 4;
+        hit.setAttribute('x', hitX.toFixed(2));
+        hit.setAttribute('y', (centerY - 12).toFixed(2));
+        hit.setAttribute('width', Math.max(24, hitRight - hitX).toFixed(2));
+        hit.setAttribute('height', '24');
+        hit.setAttribute('rx', '4');
+        var badgeRect = badge.querySelector('rect');
+        var badgeText = badge.querySelector('text');
+        badgeRect.setAttribute('x', badgeX.toFixed(2));
+        badgeRect.setAttribute('y', (centerY - 7).toFixed(2));
+        badgeRect.setAttribute('width', badgeWidth.toFixed(2));
+        badgeRect.setAttribute('height', '14');
+        badgeRect.setAttribute('rx', '7');
+        badgeText.setAttribute('x', (badgeX + badgeWidth / 2).toFixed(2));
+        badgeText.setAttribute('y', (centerY + 2.5).toFixed(2));
+        return true;
+      }
+      function layoutLegendBridge() {
+        legendEntries.forEach(layoutLegendEntry);
+        if (!legendBridge) return;
+        Array.prototype.forEach.call(legendBridge.querySelectorAll('[data-legend-zero]'), layoutLegendEntry);
+      }
+      function decorateLegendBridge() {
+        legendEntries = [];
+        if (!legendBridge || html.getAttribute('data-embed') === 'true') return false;
+        var facts = {};
+        collectKinds().forEach(function (kind) { facts[kind.id] = kind; });
+        Array.prototype.forEach.call(legendBridge.querySelectorAll('[data-legend-kind]'), function (entry) {
+          var kind = entry.getAttribute('data-legend-kind');
+          var fact = facts[kind];
+          var count = fact ? fact.nodes.length : 0;
+          entry.setAttribute('data-legend-count', String(count));
+          var hit = document.createElementNS(namespace, 'rect');
+          hit.setAttribute('data-legend-bridge-runtime', '');
+          hit.setAttribute('data-legend-hit', '');
+          hit.setAttribute('aria-hidden', 'true');
+          entry.insertBefore(hit, entry.firstChild);
+          var badge = document.createElementNS(namespace, 'g');
+          badge.setAttribute('data-legend-bridge-runtime', '');
+          badge.setAttribute('data-legend-count-badge', '');
+          badge.setAttribute('aria-hidden', 'true');
+          badge.appendChild(document.createElementNS(namespace, 'rect'));
+          var countText = document.createElementNS(namespace, 'text');
+          countText.textContent = String(count);
+          badge.appendChild(countText);
+          entry.appendChild(badge);
+          if (!fact || !count) {
+            entry.setAttribute('data-legend-zero', '');
+            return;
+          }
+          entry.setAttribute('role', 'button');
+          entry.setAttribute('tabindex', legendEntries.length ? '-1' : '0');
+          var visibleLabel = entry.getAttribute('data-legend-label') || fact.label;
+          entry.setAttribute('aria-label', 'Inspect ' + visibleLabel + ', ' + count + ' node' + (count === 1 ? '' : 's'));
+          entry.setAttribute('aria-pressed', 'false');
+          entry.setAttribute('aria-haspopup', 'dialog');
+          entry.setAttribute('aria-controls', 'semantic-lens');
+          entry.setAttribute('aria-expanded', 'false');
+          legendEntries.push(entry);
+        });
+        if (!legendEntries.length) return false;
+        legendBridge.setAttribute('role', legendEntries.length >= 3 ? 'toolbar' : 'group');
+        legendBridge.setAttribute('aria-label', 'Semantic legend');
+        syncLegendBridge();
+        layoutLegendBridge();
+        try {
+          if (document.fonts && document.fonts.ready) document.fonts.ready.then(layoutLegendBridge);
+        } catch (_) {}
+        return true;
+      }
+      function syncLegendBridge() {
+        legendEntries.forEach(function (entry) {
+          var selected = selectedKinds.indexOf(entry.getAttribute('data-legend-kind')) >= 0;
+          entry.setAttribute('aria-pressed', selected ? 'true' : 'false');
+          entry.setAttribute('aria-expanded', !panel.hidden && lensOpener === entry ? 'true' : 'false');
+          if (selected) entry.setAttribute('data-legend-selected', '');
+          else entry.removeAttribute('data-legend-selected');
+        });
+      }
+      function clearLegendPreview() {
+        activeLegendPreview = null;
+        svg.removeAttribute('data-legend-preview-active');
+        Array.prototype.forEach.call(svg.querySelectorAll('[data-legend-preview-match], [data-legend-preview-selected], [data-legend-preview-peer]'), function (element) {
+          element.removeAttribute('data-legend-preview-match');
+          element.removeAttribute('data-legend-preview-selected');
+          element.removeAttribute('data-legend-preview-peer');
+        });
+      }
+      function strongerLegendOwnerActive() {
+        return selectedKinds.length > 0 || !panel.hidden || html.getAttribute('data-present') === 'true' ||
+          svg.hasAttribute('data-focus-active') || svg.hasAttribute('data-intent-trace-active') ||
+          svg.hasAttribute('data-route-picking') || svg.hasAttribute('data-route-active') ||
+          svg.hasAttribute('data-story-active') || svg.hasAttribute('data-relationship-preview-active');
+      }
+      function previewLegendKind(entry) {
+        clearLegendPreview();
+        if (!entry || strongerLegendOwnerActive()) return false;
+        var kind = entry.getAttribute('data-legend-kind');
+        var byId = nodesById();
+        var matches = Object.keys(byId).filter(function (id) {
+          return (byId[id].getAttribute('data-node-kind') || 'neutral') === kind;
+        });
+        if (!matches.length) return false;
+        var chosen = {};
+        matches.forEach(function (id) {
+          chosen[id] = true;
+          byId[id].setAttribute('data-legend-preview-match', '');
+          byId[id].setAttribute('data-legend-preview-selected', '');
+        });
+        edgeGroups().forEach(function (edge) {
+          if (!chosen[edge.from] && !chosen[edge.to]) return;
+          edge.members.forEach(function (member) { member.setAttribute('data-legend-preview-match', ''); });
+          [edge.from, edge.to].forEach(function (id) {
+            if (!byId[id] || chosen[id]) return;
+            byId[id].setAttribute('data-legend-preview-match', '');
+            byId[id].setAttribute('data-legend-preview-peer', '');
+          });
+        });
+        svg.setAttribute('data-legend-preview-active', kind);
+        activeLegendPreview = entry;
+        return true;
+      }
+      function syncLegendPreview() {
+        var next = focusedLegendEntry || hoveredLegendEntry;
+        if (next === activeLegendPreview) return;
+        clearLegendPreview();
+        if (next) previewLegendKind(next);
+      }
+      function activateLegendEntry(entry) {
+        if (!entry || entry.getAttribute('role') !== 'button') return false;
+        clearLegendPreview();
+        select(entry.getAttribute('data-legend-kind'));
+        return open({ opener: entry });
+      }
+      function removeFlowOverlay() {
+        Array.prototype.forEach.call(svg.querySelectorAll('[data-semantic-lens-overlay]'), function (element) {
+          element.remove();
+        });
+        svg.removeAttribute('data-lens-flow-count');
+        svg.removeAttribute('data-lens-flow-density');
+      }
+      function flowGeometry(shape, direction, step) {
+        var clone = shape.cloneNode(false);
+        clone.removeAttribute('id');
+        clone.removeAttribute('class');
+        clone.removeAttribute('style');
+        clone.removeAttribute('marker-start');
+        clone.removeAttribute('marker-mid');
+        clone.removeAttribute('marker-end');
+        clone.removeAttribute('role');
+        clone.removeAttribute('aria-label');
+        clone.removeAttribute('aria-hidden');
+        clone.removeAttribute('data-animate');
+        clone.removeAttribute('data-edge-from');
+        clone.removeAttribute('data-edge-to');
+        clone.removeAttribute('data-edge-key');
+        clone.removeAttribute('data-edge-id');
+        clone.removeAttribute('data-edge-label');
+        clone.removeAttribute('data-lens-match');
+        clone.setAttribute('class', 'semantic-lens-flow');
+        clone.setAttribute('data-direction', direction);
+        clone.setAttribute('pathLength', '1');
+        clone.style.setProperty('--lens-flow-delay', (step * 0.08).toFixed(2) + 's');
+        return clone;
+      }
+      function renderFlowOverlay(entries) {
+        removeFlowOverlay();
+        svg.setAttribute('data-lens-flow-count', String(entries.length));
+        if (!entries.length || html.getAttribute('data-embed') === 'true') return false;
+        if (entries.length > MAX_LENS_FLOW_EDGES) {
+          svg.setAttribute('data-lens-flow-density', 'quiet');
+          return false;
+        }
+        var overlay = document.createElementNS(namespace, 'g');
+        overlay.setAttribute('class', 'semantic-lens-overlay');
+        overlay.setAttribute('data-semantic-lens-overlay', '');
+        overlay.setAttribute('aria-hidden', 'true');
+        entries.forEach(function (entry, step) {
+          var wrapper = document.createElementNS(namespace, 'g');
+          if (entry.edge.members[0].hasAttribute('transform')) {
+            wrapper.setAttribute('transform', entry.edge.members[0].getAttribute('transform'));
+          }
+          edgeShapes(entry.edge.members[0]).forEach(function (shape) {
+            wrapper.appendChild(flowGeometry(shape, entry.direction, step));
+          });
+          if (wrapper.childNodes.length) overlay.appendChild(wrapper);
+        });
+        if (!overlay.childNodes.length) return false;
+        var firstNode = svg.querySelector('[data-node-id]');
+        if (firstNode) svg.insertBefore(overlay, firstNode);
+        else svg.appendChild(overlay);
+        return true;
+      }
+      function cleanSvgState() {
+        removeFlowOverlay();
+        svg.removeAttribute('data-lens-active');
+        Array.prototype.forEach.call(svg.querySelectorAll('[data-lens-match], [data-lens-selected], [data-lens-peer]'), function (element) {
+          element.removeAttribute('data-lens-match');
+          element.removeAttribute('data-lens-selected');
+          element.removeAttribute('data-lens-peer');
+        });
+      }
+      function renderKinds() {
+        kindsRoot.textContent = '';
+        collectKinds().forEach(function (kind) {
+          var button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'semantic-lens-kind';
+          button.setAttribute('data-kind', kind.id);
+          button.setAttribute('aria-pressed', selectedKinds.indexOf(kind.id) >= 0 ? 'true' : 'false');
+          button.setAttribute('aria-label', kind.label + ', ' + kind.nodes.length + ' node' + (kind.nodes.length === 1 ? '' : 's'));
+          button.disabled = selectedKinds.length >= 2 && selectedKinds.indexOf(kind.id) === -1;
+          var swatch = document.createElement('span');
+          swatch.className = 'semantic-lens-swatch';
+          swatch.setAttribute('aria-hidden', 'true');
+          var label = document.createElement('strong');
+          label.textContent = kind.label;
+          var count = document.createElement('em');
+          count.textContent = String(kind.nodes.length);
+          button.appendChild(swatch);
+          button.appendChild(label);
+          button.appendChild(count);
+          kindsRoot.appendChild(button);
+        });
+      }
+      function updateHash() {
+        try {
+          var hash = selectedKinds.length
+            ? '#lens=' + selectedKinds.map(encodeURIComponent).join('~')
+            : '';
+          history.replaceState(null, '', location.pathname + location.search + hash);
+        } catch (_) {}
+      }
+      function updateTrigger() {
+        var active = selectedKinds.length > 0;
+        trigger.setAttribute('aria-pressed', active ? 'true' : 'false');
+        trigger.setAttribute('aria-label', active ? 'Open active semantic lens' : 'Open semantic lens');
+        copyBtn.hidden = !active;
+        syncLegendBridge();
+      }
+      function overlapArea(a, b) {
+        var width = Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left));
+        var height = Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+        return width * height;
+      }
+      function dockPanel(byId) {
+        panel.removeAttribute('data-dock-side');
+        if (panel.hidden || !selectedKinds.length || window.innerWidth <= 720) return 'right';
+        var panelRect = panel.getBoundingClientRect();
+        var containerRect = container.getBoundingClientRect();
+        if (!panelRect.width || !panelRect.height) return 'right';
+        var selectedRects = Object.keys(byId).filter(function (id) {
+          return selectedKinds.indexOf(byId[id].getAttribute('data-node-kind') || 'neutral') >= 0;
+        }).map(function (id) { return byId[id].getBoundingClientRect(); });
+        var top = panelRect.top;
+        var width = panelRect.width;
+        var leftCandidate = { left: containerRect.left + 16, right: containerRect.left + 16 + width, top: top, bottom: panelRect.bottom };
+        var rightCandidate = { left: containerRect.right - 16 - width, right: containerRect.right - 16, top: top, bottom: panelRect.bottom };
+        var leftScore = selectedRects.reduce(function (score, rect) { return score + overlapArea(leftCandidate, rect); }, 0);
+        var rightScore = selectedRects.reduce(function (score, rect) { return score + overlapArea(rightCandidate, rect); }, 0);
+        var side = leftScore < rightScore ? 'left' : 'right';
+        panel.setAttribute('data-dock-side', side);
+        return side;
+      }
+      function applySelection(options) {
+        options = options || {};
+        cleanSvgState();
+        var byId = nodesById();
+        var nodeKind = {};
+        Object.keys(byId).forEach(function (id) { nodeKind[id] = byId[id].getAttribute('data-node-kind') || 'neutral'; });
+        if (!selectedKinds.length) {
+          status.textContent = 'Choose a kind to inspect its nodes and touching relationships.';
+          updateTrigger();
+          renderKinds();
+          dockPanel(byId);
+          if (options.updateUrl !== false) updateHash();
+          return false;
+        }
+
+        var chosen = {};
+        selectedKinds.forEach(function (kind) { chosen[kind] = true; });
+        Object.keys(byId).forEach(function (id) {
+          if (!chosen[nodeKind[id]]) return;
+          byId[id].setAttribute('data-lens-match', '');
+          byId[id].setAttribute('data-lens-selected', '');
+        });
+
+        var touching = 0;
+        var forward = 0;
+        var reverse = 0;
+        var crossKind = selectedKinds.length === 2;
+        var matchedFlow = [];
+        edgeGroups().forEach(function (edge) {
+          var fromKind = nodeKind[edge.from];
+          var toKind = nodeKind[edge.to];
+          var match = false;
+          if (crossKind) {
+            if (fromKind === selectedKinds[0] && toKind === selectedKinds[1]) { match = true; forward += 1; }
+            if (fromKind === selectedKinds[1] && toKind === selectedKinds[0]) { match = true; reverse += 1; }
+          } else if (fromKind === selectedKinds[0] || toKind === selectedKinds[0]) {
+            match = true;
+            touching += 1;
+          }
+          if (!match) return;
+          var direction = 'within';
+          if (crossKind) {
+            direction = fromKind === selectedKinds[0] ? 'forward' : 'reverse';
+          } else {
+            direction = fromKind === selectedKinds[0] && toKind !== selectedKinds[0] ? 'out'
+              : (toKind === selectedKinds[0] && fromKind !== selectedKinds[0] ? 'in' : 'within');
+          }
+          matchedFlow.push({ edge: edge, direction: direction });
+          edge.members.forEach(function (member) { member.setAttribute('data-lens-match', ''); });
+          if (!crossKind) {
+            [edge.from, edge.to].forEach(function (id) {
+              if (!byId[id]) return;
+              byId[id].setAttribute('data-lens-match', '');
+              if (!chosen[nodeKind[id]]) byId[id].setAttribute('data-lens-peer', '');
+            });
+          }
+        });
+
+        svg.setAttribute('data-lens-active', selectedKinds.join(' '));
+        renderFlowOverlay(matchedFlow);
+        if (crossKind) {
+          var total = forward + reverse;
+          status.textContent = kindLabel(selectedKinds[0]) + ' → ' + kindLabel(selectedKinds[1]) + ': ' + forward + ' · ' +
+            kindLabel(selectedKinds[1]) + ' → ' + kindLabel(selectedKinds[0]) + ': ' + reverse + ' · ' +
+            total + ' direct relationship' + (total === 1 ? '' : 's');
+        } else {
+          var nodeCount = collectKinds().filter(function (kind) { return kind.id === selectedKinds[0]; })[0].nodes.length;
+          status.textContent = nodeCount + ' ' + kindLabel(selectedKinds[0]) + ' node' + (nodeCount === 1 ? '' : 's') + ' · ' +
+            touching + ' touching relationship' + (touching === 1 ? '' : 's') + ' · connected peers remain visible';
+        }
+        updateTrigger();
+        renderKinds();
+        dockPanel(byId);
+        if (options.updateUrl !== false) updateHash();
+        return true;
+      }
+      function prepareForLens() {
+        clearLegendPreview();
+        if (Archify.focus && typeof Archify.focus.clear === 'function') {
+          Archify.focus.clear({ updateUrl: false, preserveView: true });
+        }
+        if (Archify.routeProbe && typeof Archify.routeProbe.clear === 'function') {
+          Archify.routeProbe.clear({ updateUrl: false, restoreFocus: false });
+        }
+        if (Archify.guidedViews && typeof Archify.guidedViews.showAll === 'function') {
+          Archify.guidedViews.showAll({ clearFocus: false, updateUrl: false });
+        }
+        if (Archify.intentTrace && typeof Archify.intentTrace.clear === 'function') {
+          Archify.intentTrace.clear({ announce: false });
+        }
+      }
+      function select(kind, options) {
+        options = options || {};
+        clearLegendPreview();
+        var exists = collectKinds().some(function (entry) { return entry.id === kind; });
+        if (!exists) return false;
+        var index = selectedKinds.indexOf(kind);
+        if (index >= 0) selectedKinds.splice(index, 1);
+        else {
+          if (selectedKinds.length >= 2) return false;
+          if (!selectedKinds.length) prepareForLens();
+          selectedKinds.push(kind);
+        }
+        return applySelection(options);
+      }
+      function close(options) {
+        options = options || {};
+        panel.hidden = true;
+        trigger.setAttribute('aria-expanded', 'false');
+        updateTrigger();
+        if (options.restoreFocus !== false && lensOpener && typeof lensOpener.focus === 'function') lensOpener.focus();
+        return false;
+      }
+      function open(options) {
+        options = options || {};
+        if (html.getAttribute('data-embed') === 'true') return false;
+        lensOpener = options.opener || trigger;
+        if (Archify.exportMenu && Archify.exportMenu.isOpen()) Archify.exportMenu.close(false);
+        if (Archify.finder && Archify.finder.isOpen()) Archify.finder.close({ restoreFocus: false });
+        if (Archify.radar && Archify.radar.isOpen()) Archify.radar.close({ restoreFocus: false });
+        if (Archify.guide && Archify.guide.isOpen()) Archify.guide.close({ restoreFocus: false });
+        renderKinds();
+        panel.hidden = false;
+        trigger.setAttribute('aria-expanded', 'true');
+        updateTrigger();
+        requestAnimationFrame(function () {
+          dockPanel(nodesById());
+          var activeButton = kindsRoot.querySelector('[aria-pressed="true"]');
+          var firstButton = activeButton || kindsRoot.querySelector('button:not(:disabled)');
+          if (firstButton) firstButton.focus();
+        });
+        return true;
+      }
+      function toggle() { return panel.hidden ? open({ opener: trigger }) : close(); }
+      function clear(options) {
+        options = options || {};
+        selectedKinds = [];
+        cleanSvgState();
+        panel.removeAttribute('data-dock-side');
+        updateTrigger();
+        renderKinds();
+        status.textContent = 'Choose a kind to inspect its nodes and touching relationships.';
+        if (options.updateUrl !== false) updateHash();
+        if (options.preserveView !== true && Archify.view && typeof Archify.view.reset === 'function') {
+          Archify.view.reset({ automatic: true });
+        }
+        if (options.closePanel === true) close({ restoreFocus: false });
+        return false;
+      }
+      function fallbackCopy(value) {
+        var field = document.createElement('textarea');
+        field.value = value;
+        field.setAttribute('readonly', '');
+        field.style.position = 'fixed';
+        field.style.opacity = '0';
+        document.body.appendChild(field);
+        field.select();
+        var copied = false;
+        try { copied = document.execCommand('copy'); } catch (_) {}
+        field.remove();
+        return copied;
+      }
+      function copyLink() {
+        if (!selectedKinds.length) return Promise.resolve(false);
+        var value = location.href.replace(/#.*$/, '') + '#lens=' + selectedKinds.map(encodeURIComponent).join('~');
+        var copy = navigator.clipboard && typeof navigator.clipboard.writeText === 'function'
+          ? navigator.clipboard.writeText(value).then(function () { return true; }).catch(function () { return fallbackCopy(value); })
+          : Promise.resolve(fallbackCopy(value));
+        return copy.then(function (copied) {
+          copyBtn.textContent = copied ? 'Copied' : 'Copy failed';
+          window.setTimeout(function () { copyBtn.textContent = 'Copy link'; }, 1600);
+          return copied;
+        });
+      }
+      function syncFromHash() {
+        try {
+          var params = new URLSearchParams(location.hash.replace(/^#/, ''));
+          var value = params.get('lens');
+          if (!value) {
+            if (selectedKinds.length) clear({ updateUrl: false, preserveView: true });
+            return;
+          }
+          var available = collectKinds().map(function (kind) { return kind.id; });
+          var requested = value.split('~').filter(function (kind, index, list) {
+            return available.indexOf(kind) >= 0 && list.indexOf(kind) === index;
+          }).slice(0, 2);
+          if (!requested.length) return;
+          prepareForLens();
+          selectedKinds = requested;
+          applySelection({ updateUrl: false });
+        } catch (_) {}
+      }
+
+      trigger.addEventListener('click', toggle);
+      if (decorateLegendBridge()) {
+        legendBridge.addEventListener('click', function (event) {
+          var entry = event.target.closest('[data-legend-kind][role="button"]');
+          if (entry) activateLegendEntry(entry);
+        });
+        legendBridge.addEventListener('pointerover', function (event) {
+          if (event.pointerType === 'touch' || (finePointerQuery && !finePointerQuery.matches)) return;
+          var entry = event.target.closest('[data-legend-kind][role="button"]');
+          if (!entry || (event.relatedTarget && entry.contains(event.relatedTarget))) return;
+          hoveredLegendEntry = entry;
+          syncLegendPreview();
+        });
+        legendBridge.addEventListener('pointerout', function (event) {
+          var entry = event.target.closest('[data-legend-kind][role="button"]');
+          if (!entry || (event.relatedTarget && entry.contains(event.relatedTarget))) return;
+          if (hoveredLegendEntry === entry) hoveredLegendEntry = null;
+          syncLegendPreview();
+        });
+        legendBridge.addEventListener('focusin', function (event) {
+          var entry = event.target.closest('[data-legend-kind][role="button"]');
+          if (!entry) return;
+          focusedLegendEntry = entry;
+          legendEntries.forEach(function (candidate) {
+            candidate.setAttribute('tabindex', candidate === entry ? '0' : '-1');
+          });
+          syncLegendPreview();
+        });
+        legendBridge.addEventListener('focusout', function (event) {
+          var entry = event.target.closest('[data-legend-kind][role="button"]');
+          if (!entry || (event.relatedTarget && entry.contains(event.relatedTarget))) return;
+          if (focusedLegendEntry === entry) focusedLegendEntry = null;
+          syncLegendPreview();
+        });
+        legendBridge.addEventListener('keydown', function (event) {
+          var entry = event.target.closest('[data-legend-kind][role="button"]');
+          if (!entry) return;
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            activateLegendEntry(entry);
+            return;
+          }
+          var index = legendEntries.indexOf(entry);
+          var next = null;
+          if (event.key === 'ArrowRight') next = (index + 1) % legendEntries.length;
+          else if (event.key === 'ArrowLeft') next = (index - 1 + legendEntries.length) % legendEntries.length;
+          else if (event.key === 'Home') next = 0;
+          else if (event.key === 'End') next = legendEntries.length - 1;
+          if (next === null) return;
+          event.preventDefault();
+          legendEntries.forEach(function (candidate, candidateIndex) {
+            candidate.setAttribute('tabindex', candidateIndex === next ? '0' : '-1');
+          });
+          legendEntries[next].focus();
+        });
+      }
+      closeBtn.addEventListener('click', function () { close(); });
+      clearBtn.addEventListener('click', function () { clear({ preserveView: true }); });
+      copyBtn.addEventListener('click', copyLink);
+      kindsRoot.addEventListener('click', function (event) {
+        var button = event.target.closest('[data-kind]');
+        if (!button || button.disabled) return;
+        select(button.getAttribute('data-kind'));
+      });
+      kindsRoot.addEventListener('keydown', function (event) {
+        var buttons = Array.prototype.slice.call(kindsRoot.querySelectorAll('button:not(:disabled)'));
+        var index = buttons.indexOf(document.activeElement);
+        var next = null;
+        if (index >= 0 && (event.key === 'ArrowRight' || event.key === 'ArrowDown')) next = (index + 1) % buttons.length;
+        else if (index >= 0 && (event.key === 'ArrowLeft' || event.key === 'ArrowUp')) next = (index - 1 + buttons.length) % buttons.length;
+        else if (event.key === 'Home' && buttons.length) next = 0;
+        else if (event.key === 'End' && buttons.length) next = buttons.length - 1;
+        if (next !== null) { event.preventDefault(); buttons[next].focus(); }
+      });
+      panel.addEventListener('keydown', function (event) {
+        if (event.key !== 'Escape') return;
+        event.preventDefault();
+        event.stopPropagation();
+        close();
+      });
+      document.addEventListener('click', function (event) {
+        var eventPath = typeof event.composedPath === 'function' ? event.composedPath() : [];
+        var clickedInside = eventPath.indexOf(panel) >= 0 || panel.contains(event.target);
+        var clickedLauncher = event.target === trigger || legendEntries.some(function (entry) {
+          return event.target === entry || entry.contains(event.target);
+        });
+        if (!panel.hidden && !clickedInside && !clickedLauncher) close({ restoreFocus: false });
+      });
+      window.addEventListener('hashchange', syncFromHash);
+      window.addEventListener('resize', function () {
+        if (!panel.hidden && selectedKinds.length) dockPanel(nodesById());
+        layoutLegendBridge();
+      });
+      renderKinds();
+      syncFromHash();
+
+      return {
+        open: open,
+        close: close,
+        toggle: toggle,
+        clear: clear,
+        clearPreview: clearLegendPreview,
+        select: select,
+        copyLink: copyLink,
+        isOpen: function () { return !panel.hidden; },
+        active: function () { return selectedKinds.length ? selectedKinds.slice() : null; },
+        kinds: function () { return collectKinds().map(function (kind) { return { id: kind.id, count: kind.nodes.length }; }); }
+      };
+    })();
+
+    /* ============================================================
+       Diagram Guide — a factual command deck over existing interactions.
+       Counts come from compiled semantics; actions delegate to Finder, Route
+       Probe, Semantic Radar, Semantic Lens, Story Trail, Presentation, theme, export, and
+       camera without adding a second command implementation or SVG state.
+       ============================================================ */
+    Archify.guide = (function () {
+      var html = document.documentElement;
+      var container = document.querySelector('.diagram-container');
+      var svg = container.querySelector(':scope > svg');
+      var trigger = document.getElementById('btn-diagram-guide');
+      var panel = document.getElementById('diagram-guide');
+      var closeBtn = document.getElementById('diagram-guide-close');
+      var stats = document.getElementById('diagram-guide-stats');
+      var actions = document.getElementById('diagram-guide-actions');
+      var feedback = document.getElementById('diagram-guide-feedback');
+      var storyBtn = actions.querySelector('[data-guide-action="story"]');
+      var storyCopy = document.getElementById('diagram-guide-story-copy');
+      var routePanel = document.getElementById('route-probe');
+
+      function viewCount() {
+        return Archify.guidedViews && Number(Archify.guidedViews.count) || 0;
+      }
+      function relationshipCount() {
+        var seen = {};
+        Array.prototype.forEach.call(svg.querySelectorAll('[data-edge-from][data-edge-to]'), function (edge) {
+          var key = edge.getAttribute('data-edge-key') || [
+            edge.getAttribute('data-edge-from'),
+            edge.getAttribute('data-edge-to'),
+            edge.getAttribute('data-edge-label') || ''
+          ].join('\u0000');
+          seen[key] = true;
+        });
+        return Object.keys(seen).length;
+      }
+      function renderFacts() {
+        var nodes = svg.querySelectorAll('[data-node-id]').length;
+        var relationships = relationshipCount();
+        var views = viewCount();
+        stats.textContent = nodes + ' semantic node' + (nodes === 1 ? '' : 's') + ' · ' +
+          relationships + ' relationship' + (relationships === 1 ? '' : 's') + ' · ' +
+          views + ' guided view' + (views === 1 ? '' : 's');
+        storyBtn.disabled = views === 0;
+        storyBtn.setAttribute('aria-disabled', views === 0 ? 'true' : 'false');
+        storyCopy.textContent = views
+          ? 'Walk ' + views + ' authored chapter' + (views === 1 ? '' : 's') + ' and their real relationships.'
+          : 'No authored guided story in this diagram.';
+      }
+      function actionButtons() {
+        return Array.prototype.slice.call(actions.querySelectorAll('.diagram-guide-action:not(:disabled)'));
+      }
+      function close(options) {
+        options = options || {};
+        panel.hidden = true;
+        html.removeAttribute('data-guide-open');
+        routePanel.removeAttribute('data-guide-open');
+        trigger.setAttribute('aria-expanded', 'false');
+        trigger.setAttribute('aria-label', 'Open diagram guide');
+        feedback.textContent = '';
+        if (options.restoreFocus !== false) trigger.focus();
+        return false;
+      }
+      function open() {
+        if (html.getAttribute('data-embed') === 'true') return false;
+        if (Archify.semanticLens && typeof Archify.semanticLens.clearPreview === 'function') Archify.semanticLens.clearPreview();
+        if (Archify.exportMenu && Archify.exportMenu.isOpen()) Archify.exportMenu.close(false);
+        if (Archify.finder && Archify.finder.isOpen()) Archify.finder.close({ restoreFocus: false });
+        if (Archify.radar && Archify.radar.isOpen()) Archify.radar.close({ restoreFocus: false });
+        if (Archify.semanticLens && Archify.semanticLens.isOpen()) Archify.semanticLens.close({ restoreFocus: false });
+        if (Archify.guidedViews && Archify.guidedViews.isPlaying && Archify.guidedViews.isPlaying()) {
+          Archify.guidedViews.pause();
+        }
+        if (Archify.routeProbe && Archify.routeProbe.isJourneyPlaying && Archify.routeProbe.isJourneyPlaying()) {
+          Archify.routeProbe.pauseJourney({ preserveElapsed: true, reason: 'guide' });
+        }
+        renderFacts();
+        panel.hidden = false;
+        html.setAttribute('data-guide-open', 'true');
+        routePanel.setAttribute('data-guide-open', 'true');
+        trigger.setAttribute('aria-expanded', 'true');
+        trigger.setAttribute('aria-label', 'Close diagram guide');
+        feedback.textContent = '';
+        requestAnimationFrame(function () {
+          var first = actionButtons()[0];
+          if (first) first.focus();
+        });
+        return true;
+      }
+      function toggle() { return panel.hidden ? open() : close(); }
+      function execute(action) {
+        feedback.textContent = '';
+        if (action === 'story' && !viewCount()) {
+          feedback.textContent = 'This diagram has no authored guided story.';
+          return false;
+        }
+        close({ restoreFocus: false });
+        if (action === 'find') return Archify.finder.open();
+        if (action === 'route') return Archify.routeProbe.begin({ focusNode: true });
+        if (action === 'map') return Archify.radar.open();
+        if (action === 'lens') return Archify.semanticLens.open();
+        if (action === 'story') return Archify.guidedViews.play();
+        if (action === 'present') return Archify.presentation.enter();
+        if (action === 'export') return Archify.exportMenu.open();
+        if (action === 'theme') return Archify.theme.toggle();
+        if (action === 'preset') return Archify.preset.cycle();
+        if (action === 'reset') return Archify.view.reset();
+        if (action === 'zoom-in') return Archify.view.zoomIn();
+        if (action === 'zoom-out') return Archify.view.zoomOut();
+        return false;
+      }
+      function actionForKey(key) {
+        return {
+          '/': 'find',
+          r: 'route',
+          m: 'map',
+          l: 'lens',
+          p: 'story',
+          f: 'present',
+          e: 'export',
+          t: 'theme',
+          s: 'preset',
+          '0': 'reset',
+          '+': 'zoom-in',
+          '=': 'zoom-in',
+          '-': 'zoom-out'
+        }[key] || null;
+      }
+
+      trigger.addEventListener('click', toggle);
+      closeBtn.addEventListener('click', function () { close(); });
+      actions.addEventListener('click', function (event) {
+        var button = event.target.closest('[data-guide-action]');
+        if (!button || button.disabled) return;
+        event.stopPropagation();
+        execute(button.getAttribute('data-guide-action'));
+      });
+      panel.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' || event.key === '?') {
+          event.preventDefault();
+          event.stopPropagation();
+          close();
+          return;
+        }
+        var buttons = actionButtons();
+        var index = buttons.indexOf(document.activeElement);
+        var next = null;
+        if (index >= 0 && event.key === 'ArrowRight') next = (index + 1) % buttons.length;
+        else if (index >= 0 && event.key === 'ArrowDown') next = (index + 1) % buttons.length;
+        else if (index >= 0 && event.key === 'ArrowLeft') next = (index - 1 + buttons.length) % buttons.length;
+        else if (index >= 0 && event.key === 'ArrowUp') next = (index - 1 + buttons.length) % buttons.length;
+        else if (event.key === 'Home' && buttons.length) next = 0;
+        else if (event.key === 'End' && buttons.length) next = buttons.length - 1;
+        if (next !== null) {
+          event.preventDefault();
+          event.stopPropagation();
+          buttons[next].focus();
+          return;
+        }
+        var action = actionForKey(event.key.length === 1 ? event.key.toLowerCase() : event.key);
+        if (!action) return;
+        event.preventDefault();
+        event.stopPropagation();
+        execute(action);
+      });
+      document.addEventListener('click', function (event) {
+        if (!panel.hidden && !panel.contains(event.target) && event.target !== trigger) close({ restoreFocus: false });
+      });
+
+      renderFacts();
+      return {
+        open: open,
+        close: close,
+        toggle: toggle,
+        execute: execute,
+        isOpen: function () { return !panel.hidden; },
+        facts: function () {
+          return {
+            nodes: svg.querySelectorAll('[data-node-id]').length,
+            relationships: relationshipCount(),
+            views: viewCount()
+          };
+        }
+      };
+    })();
+
+    /* ============================================================
+       Global keyboard shortcuts
+       ? -> open Diagram Guide
+       T -> toggle theme
+       S -> cycle visual style
+       E -> open export menu
+         F -> toggle presentation stage
+         M -> toggle Semantic Radar
+         L -> toggle Semantic Lens
+         R -> start/clear Route Probe
+         / -> open node finder or the active route endpoint picker
+         + / - -> zoom, 0 -> reset view
+         Escape -> clear temporary trace/focus/view first, then exit presentation
+       Ignored when focus is inside an input/textarea/contenteditable.
+       ============================================================ */
+    document.addEventListener('keydown', function (e) {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.defaultPrevented) return;
+      var t = e.target;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+      if (Archify.preset && Archify.preset.isOpen() && e.key !== 'Escape' && e.key !== 's' && e.key !== 'S') {
+        Archify.preset.close(false);
+      }
+      if (e.key === '?') {
+        e.preventDefault();
+        Archify.guide.toggle();
+      } else if (e.key === '/') {
+        e.preventDefault();
+        Archify.finder.open();
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        Archify.theme.toggle();
+      } else if (e.key === 's' || e.key === 'S') {
+        e.preventDefault();
+        Archify.preset.cycle();
+      } else if (e.key === 'e' || e.key === 'E') {
+        e.preventDefault();
+        if (!Archify.exportMenu.isOpen()) Archify.exportMenu.open();
+      } else if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault();
+        Archify.presentation.toggle();
+      } else if (e.key === 'm' || e.key === 'M') {
+        e.preventDefault();
+        Archify.radar.toggle();
+      } else if (e.key === 'l' || e.key === 'L') {
+        e.preventDefault();
+        Archify.semanticLens.toggle();
+      } else if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault();
+        Archify.routeProbe.toggle({ focusNode: true });
+      } else if (e.key === '+' || e.key === '=') {
+        e.preventDefault();
+        Archify.view.zoomIn();
+      } else if (e.key === '-') {
+        e.preventDefault();
+        Archify.view.zoomOut();
+      } else if (e.key === '0') {
+        e.preventDefault();
+        Archify.view.reset();
+      } else if (e.key === 'Escape' && Archify.preset.isOpen()) {
+        e.preventDefault();
+        Archify.preset.close(true);
+      } else if (e.key === 'Escape' && Archify.semanticLens.isOpen()) {
+        e.preventDefault();
+        Archify.semanticLens.close({ restoreFocus: true });
+      } else if (e.key === 'Escape' && Archify.semanticLens.active()) {
+        e.preventDefault();
+        Archify.semanticLens.clear({ preserveView: true });
+      } else if (e.key === 'Escape' && Archify.guide.isOpen()) {
+        e.preventDefault();
+        Archify.guide.close({ restoreFocus: true });
+      } else if (e.key === 'Escape' && Archify.radar.isOpen()) {
+        e.preventDefault();
+        Archify.radar.close({ restoreFocus: true });
+      } else if (e.key === 'Escape' && Archify.routeProbe.active()) {
+        e.preventDefault();
+        Archify.routeProbe.escape({ restoreFocus: true });
+      } else if (e.key === 'Escape' && Archify.intentTrace.active()) {
+        e.preventDefault();
+        Archify.intentTrace.clear();
+      } else if (e.key === 'Escape' && Archify.focus.active()) {
+        e.preventDefault();
+        Archify.focus.clear({ restoreFocus: true });
+      } else if (e.key === 'Escape' && Archify.presentation.active()) {
+        e.preventDefault();
+        Archify.presentation.exit();
+      }
+    });
+  </script>
+</body>
+</html>
